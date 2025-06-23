@@ -40,7 +40,7 @@ def server_test(server_v1=SERVER, waiting_port_v1=WAITING_PORT):
                     
             print("tempe:" + str(tempe_dht))
             print("humid:" + str(humid_dht))
-            print("datetime" + str(time_dht))
+            print("time" + str(time_dht))
 
             time.sleep(LOOP_WAIT)
 
