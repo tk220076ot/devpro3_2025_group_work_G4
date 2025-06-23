@@ -4,35 +4,45 @@
         <meta charset="UTF-8"/>
         <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
         <title>各センサデータの表示</title>
-        <link rel="stylesheet" href="file_show.css"/>
-
+        <link rel="stylesheet" href="{{ url_for('static', filename='file_show.css') }}"/>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@2.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+        <script src="{{ url_for('static', filename='js/file_show.js') }}"></script>
     </head>
 
     <body>
         <h1>各センサデータの一覧</h1>
 
-        <div>
-            <label>温度: </label>
-            <input type="number" id="tempMin" placeholder="最小">
-            <input type="number" id="tempMax" placeholder="最大">
-        </div>
-        <div>
-            <label>湿度: </label>
-            <input type="number" id="humidMin" placeholder="最小">
-            <input type="number" id="humidMax" placeholder="最大">
-        </div>
-        <div>
-            <label>時刻: </label>
-            <input type="time" id="timeMin">
-            <input type="time" id="timeMax">
-        </div>
+        <canvas id="sensorChart"></canvas>
+
+        <form class="row g-3 align-items-end mb-4" id="filterForm">
+            <div class="col-auto col-sm-3 col-md-2">
+                <label class="form-label">温度</label>
+                <input type="number" id="tempMin" class="form-control" placeholder="最小">
+                <input type="number" id="tempMax" class="form-control mt-1" placeholder="最大">
+            </div>
+
+            <div class="col-auto col-sm-3 col-md-2">
+                <label class="form-label">湿度</label>
+                <input type="number" id="humidMin" class="form-control" placeholder="最小">
+                <input type="number" id="humidMax" class="form-control mt-1" placeholder="最大">
+            </div>
+
+            <div class="col-auto col-sm-3 col-md-2">
+                <label class="form-label">時刻</label>
+                <input type="time" id="timeMin" class="form-control">
+                <input type="time" id="timeMax" class="form-control mt-1">
+            </div>
+
+            <div class="col-auto d-flex flex-column">
+                <button type="button" class="btn btn-secondary mt-2" id="resetButton">リセット</button>
+            </div>
+        </form>
 
         <table id="csv-table">
             <thead></thead>
             <tbody></tbody>
         </table>
-
-        <script src="{{ url_for('static', filename='js/file_show.js') }}"></script>
     </body>
 
 </html>

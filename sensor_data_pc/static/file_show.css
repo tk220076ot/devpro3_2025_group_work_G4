@@ -13,7 +13,7 @@ h1 {
 table {
     width: 65%;
     border-collapse: collapse;
-    margin-top: 1em;
+    margin-top: 1em auto;
 }
 
 th, td {
@@ -26,6 +26,13 @@ th {
     background-color: #6e6e6e;
 }
 
+#sensorChart {
+  max-width: 800px;
+  max-height: 400px;
+  width: 100%;
+  height: auto;
+}
+
 @media (max-width: 600px) {
     body {
         font-size: 14px;
@@ -36,3 +43,42 @@ th {
     }
 }
 
+table {
+    width: 65%;
+    border-collapse: collapse;
+    margin: 1em auto; /* 中央寄せ */
+}
+
+th {
+    background-color: #6e6e6e;
+    color: white; /* 文字を見やすく */
+}
+
+#sensorChart {
+    max-width: 800px;
+    max-height: 400px;
+    width: 100%;
+    height: auto;
+    border: 1px solid #ccc; /* 枠線追加 */
+    background-color: #f9f9f9;
+    padding: 1em;
+}
+
+form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1em;
+    justify-content: center;
+    margin-bottom: 1em;
+}
+
+form div {
+    display: flex;
+    flex-direction: column;
+}
+
+input {
+    padding: 0.4em;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}

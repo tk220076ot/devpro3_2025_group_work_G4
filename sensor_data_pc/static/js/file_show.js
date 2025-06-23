@@ -4,10 +4,20 @@ let sortState = {
 };
 
 let originalData = [];
+let columnOrder = ["temp","humid","time"];
+let sensorChart = null;
+
+const columnLabelMap = {
+    "temp": "温度(℃)",
+    "humid": "湿度(%)",
+    "time": "時刻"
+};
+
 
 fetch('/data.json')
     .then(response => response.json())
     .then(data => {
+        console.log("[DEBUG] Fetched data:", data);
         originalData = data;
 
         const table = document.getElementById('csv-table');
@@ -16,9 +26,9 @@ fetch('/data.json')
 
         // ヘッダー作成
         const headerRow = document.createElement('tr');
-        Object.keys(data[0]).forEach((col, index) => {
+        columnOrder.forEach((col, index) => {
             const th = document.createElement('th');
-            th.textContent = col;
+            th.textContent = columnLabelMap[col] || col;
             th.style.cursor = 'pointer';
             th.addEventListener('click', () => {
                 sortTableByColumn(filteredData(), index, tbody);
@@ -29,6 +39,7 @@ fetch('/data.json')
 
         setupFilters(tbody);
         renderTableRows(data, tbody);
+        updateChart(data);
     });
 
 function timeToSeconds(timeStr) {
@@ -49,12 +60,58 @@ function setupFilters(tbody) {
         "humidMin", "humidMax",
         "timeMin", "timeMax"
     ];
+
     inputs.forEach(id => {
         document.getElementById(id).addEventListener("input", () => {
-            const filtered = filteredData();
-            renderTableRows(filtered, tbody);
+            onFilterChange(tbody);
         });
     });
+
+    const resetBtn = document.getElementById("resetButton");
+    resetBtn.addEventListener("click", () => {
+        console.log("[DEBUG] Reset button clicked");
+        inputs.forEach(id => document.getElementById(id).value = "");
+        renderTableRows(originalData, tbody);
+        updateChart(originalData);
+    });
+}
+
+function timeStrToDate(timeStr) {
+    if (!timeStr || typeof timeStr !== 'string') {
+        console.warn(`[WARN] Invalid time string:`, timeStr);
+        return null;
+    }
+
+    const parts = timeStr.trim().split(":").map(Number);
+
+    if (parts.length < 2 || parts.some(isNaN)) {
+        console.warn(`[WARN] Failed to parse time:`, timeStr);
+        return null;
+    }
+
+    const h = parts[0] ?? 0;
+    const m = parts[1] ?? 0;
+    const s = parts[2] ?? 0;
+
+    if (h > 23 || m > 59 || s > 59) {
+        console.warn(`[WARN] Time out of range:`, timeStr);
+        return null;
+    }
+
+    const now = new Date();
+    const result = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, s);
+
+    console.log(`[DEBUG] timeStrToDate("${timeStr}") ->`, result);
+
+    return result;
+}
+
+
+
+function onFilterChange(tbody) {
+    const filtered = filteredData();
+    renderTableRows(filtered, tbody);
+    updateChart(filtered);
 }
 
 function filteredData() {
@@ -88,9 +145,9 @@ function renderTableRows(data, tbody) {
     tbody.innerHTML = "";
     data.forEach(row => {
         const tr = document.createElement('tr');
-        Object.values(row).forEach(cell => {
+        columnOrder.forEach(cell => {
             const td = document.createElement('td');
-            td.textContent = cell;
+            td.textContent = row[cell];
             tr.appendChild(td);
         });
         tbody.appendChild(tr);
@@ -98,8 +155,7 @@ function renderTableRows(data, tbody) {
 }
 
 function sortTableByColumn(data, columnIndex, tbody) {
-    const keys = Object.keys(data[0]);
-    const key = keys[columnIndex];
+    const key = columnOrder[columnIndex];
 
     if (sortState.column === columnIndex) {
         sortState.ascending = !sortState.ascending;
@@ -132,3 +188,162 @@ function sortTableByColumn(data, columnIndex, tbody) {
 
     renderTableRows(data, tbody);
 }
+
+function createChart(data) {
+    const ctx = document.getElementById('sensorChart').getContext('2d');
+
+    // 時刻をラベルにする（例：HH:MM:SSのまま）
+    const labels = data.map(row => timeStrToDate(row.time)) || new Date();
+    console.log("Parsed time labels:", labels);
+    // 温度・湿度のデータ配列
+    const tempData = data.map(row => parseFloat(row.temp));
+    const humidData = data.map(row => parseFloat(row.humid));
+
+    const chart = new Chart(ctx, {
+        type: 'line',  // 折れ線グラフ
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: '温度 (℃)',
+                    data: tempData,
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    fill: false,
+                    tension: 0.1
+                },
+                {
+                    label: '湿度 (%)',
+                    data: humidData,
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                    fill: false,
+                    tension: 0.1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                x: {
+                    type: 'time',
+                    time: {
+                        unit: 'second',  // 単位を秒にすることでHH:mm:ss表示に近づける
+                        displayFormats: {
+                            second: 'HH:mm:ss'
+                        },
+                        tooltipFormat: 'HH:mm:ss'
+                    },
+                    title: {
+                        display: true,
+                        text: '時刻'
+                    }
+                },
+                y: {
+                    beginAtZero: false,
+                    title: {
+                        display: true,
+                        text: '値'
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: true
+                }
+            }
+        }
+    });
+}
+
+function updateChart(data) {
+    const ctx = document.getElementById('sensorChart')?.getContext('2d');
+    if (!ctx) {
+        console.error("[ERROR] Canvas element not found");
+        return;
+    }
+
+    const labels = [];
+    const tempData = [];
+    const humidData = [];
+
+    data.forEach(d => {
+        const time = timeStrToDate(d.time);
+        const temp = parseFloat(d.temp);
+        const humid = parseFloat(d.humid);
+
+        // データがすべて有効な場合のみ push
+        if (time instanceof Date && !isNaN(temp) && !isNaN(humid)) {
+            labels.push(time);
+            tempData.push(temp);
+            humidData.push(humid);
+        } else {
+            console.warn(`[WARN] スキップされたデータ:`, d);
+        }
+    });
+
+    console.log("[DEBUG] labels:", labels);
+    console.log("[DEBUG] tempData:", tempData);
+    console.log("[DEBUG] humidData:", humidData);
+
+    if (sensorChart) {
+        sensorChart.destroy();
+    }
+
+    sensorChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: '温度 (℃)',
+                    data: tempData,
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    fill: false,
+                    tension: 0.1
+                },
+                {
+                    label: '湿度 (%)',
+                    data: humidData,
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                    fill: false,
+                    tension: 0.1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                x: {
+                    type: 'time',
+                    time: {
+                        unit: 'second',  // 単位を秒にすることでHH:mm:ss表示に近づける
+                        displayFormats: {
+                            second: 'HH:mm:ss'
+                        },
+                        tooltipFormat: 'HH:mm:ss'
+                    },
+                    title: {
+                        display: true,
+                        text: '時刻'
+                    }
+                },
+                y: {
+                    beginAtZero: false,
+                    title: {
+                        display: true,
+                        text: '値'
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: true
+                }
+            }
+        }
+    });
+}
+
