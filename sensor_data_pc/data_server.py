@@ -29,12 +29,14 @@ def server_test(server_v1=SERVER, waiting_port_v1=WAITING_PORT):
             print(data_r_list)
             
             data0 = data_r_list[0]
+            date_dht = data0["Date"]
+            time_dht = data0["Time"]
             tempe_dht = data0["Temperature"]
             humid_dht = data0["Humidity"]
-            time_dht = data0["Time"]
+            
             
             with open(file_name, mode='a') as f:
-                row_str = str(tempe_dht) + ',' + str(humid_dht) + ',' + str(time_dht)
+                row_str = f"{date_dht},{time_dht},{tempe_dht},{humid_dht}\n"
                 f.write(row_str)
                 f.write('\n')
                     

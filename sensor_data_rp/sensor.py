@@ -69,9 +69,16 @@ def client_data(hostname_v1 = SERVER, waiting_port_v1 = WAITING_PORT, message1 =
             + 'port: ' + str(port_s))
         try:
             tempe, humid = get_dht_data()
-            now_str = str(datetime.datetime.now().strftime("%H:%M:%S"))
-            data_s_list = [{"Temperature": tempe, "Humidity": humid, "Time": now_str}]
-            print("Temperature: %f  Humidity: %f" % (tempe, humid), now_str)
+            now = datetime.datetime.now()
+            now_time_str = now.strftime("%H:%M:%S")
+            now_date_str = now.strftime("%Y-%m-%d")
+            data_s_list = [{
+                "Date": now_date_str,
+                "Time": now_time_str,
+                "Temperature": tempe,
+                "Humidity": humid
+            }]
+            print("Temperature: %f  Humidity: %f" % (tempe, humid), now_date_str, now_time_str)
             data_s_json = json.dumps(data_s_list)
             data_s = data_s_json.encode('utf-8')
             socket_r_s.send(data_s)
