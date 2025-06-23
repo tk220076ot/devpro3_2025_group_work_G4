@@ -10,7 +10,7 @@ WAITING_PORT = 8765
 LOOP_WAIT = 5
 
 now = datetime.date.today()
-file_name = './data_'+ now.strftime('%Y%m%d')+ '.csv'
+file_name = './data.csv'
 
 def server_test(server_v1=SERVER, waiting_port_v1=WAITING_PORT):
     import socket
@@ -24,30 +24,29 @@ def server_test(server_v1=SERVER, waiting_port_v1=WAITING_PORT):
             print(data_r_json)
         else:
             print(data_r_json)
-            # data_r_json = pickle.loads(data_r)
+
             data_r_list = json.loads(data_r_json) 
             print(data_r_list)
-            # data_r_str = str(data_r_list)
             
             data0 = data_r_list[0]
             tempe_dht = data0["Temperature"]
             humid_dht = data0["Humidity"]
+            time_dht = data0["Time"]
             
             with open(file_name, mode='a') as f:
-                row_str = str(tempe_dht) + ',' + str(humid_dht)
+                row_str = str(tempe_dht) + ',' + str(humid_dht) + ',' + str(time_dht)
                 f.write(row_str)
                 f.write('\n')
                     
             print("tempe:" + str(tempe_dht))
             print("humid:" + str(humid_dht))
+            print("datetime" + str(time_dht))
 
             time.sleep(LOOP_WAIT)
 
         print("closing the data socket.")
         socket.close()
-    # socoket for waiting of the requests.
-    # AF_INET     : IPv4
-    # SOCK_STREAM : TCP
+
     socket_w = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
     socket_w.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -77,9 +76,6 @@ def server_test(server_v1=SERVER, waiting_port_v1=WAITING_PORT):
 
             time.sleep(LOOP_WAIT)
 
-            # print("Now, closing the data socket.")
-            # socket_s_r.close()
-
         except json.decoder.JSONDecodeError:
             print("JSONDecodeError")
         except KeyboardInterrupt:
@@ -104,21 +100,18 @@ if __name__ == '__main__':
                 break
 
             option_key = sys.argv[count]
-#            print(option_key)
             if ("-h" == option_key):
                 count = count + 1
                 hostname_v = sys.argv[count]
-#                print(option_key, hostname_v)
 
             if ("-p" == option_key):
                 count = count + 1
                 waiting_port_v = int(sys.argv[count])
-#               print(option_key, waiting_port_v)
 
             if ("-k" == option_key):
                 count = count + 1
                 key_id_v = sys.argv[count]
-#               print(option_key, key_id_v)
+
 
             count = count + 1
 
