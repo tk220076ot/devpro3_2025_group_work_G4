@@ -18,9 +18,10 @@ def get_json_data():
             csv_data = csv.reader(f)
             for row in csv_data:
                 data_list.append({
-                    "temp": row[0],
-                    "humid": row[1],
-                    "time": row[2]
+                    "date": row[0],
+                    "time": row[1],
+                    "temp": row[2],
+                    "humid":row[3]
                 })
     except FileNotFoundError:
         return jsonify({"error": f"File '{file_path}' not found."}), 404

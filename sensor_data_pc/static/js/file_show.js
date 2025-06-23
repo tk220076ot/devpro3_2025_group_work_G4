@@ -4,15 +4,15 @@ let sortState = {
 };
 
 let originalData = [];
-let columnOrder = ["temp","humid","time"];
+const columnOrder = ["date", "time", "temp", "humid"];
 let sensorChart = null;
 
 const columnLabelMap = {
-    "temp": "温度(℃)",
-    "humid": "湿度(%)",
-    "time": "時刻"
+    date: "日付",
+    time: "時刻",
+    temp: "温度(℃)",
+    humid: "湿度(%)"
 };
-
 
 fetch('/data.json')
     .then(response => response.json())
@@ -40,7 +40,30 @@ fetch('/data.json')
         setupFilters(tbody);
         renderTableRows(data, tbody);
         updateChart(data);
-    });
+
+        // 日付選択イベント追加
+        const dateInput = document.getElementById('chartDate');
+        dateInput.addEventListener('change', () => {
+            const selectedDate = dateInput.value; // yyyy-mm-dd形式
+
+            let filtered = filteredData();
+            if (selectedDate) {
+                filtered = filtered.filter(row => row.date === selectedDate);
+            }
+
+            renderTableRows(filtered, tbody);
+            updateChart(filtered);
+        });
+
+        // 日付リセットボタン
+        const resetDateBtn = document.getElementById('resetDateButton');
+        resetDateBtn.addEventListener('click', () => {
+            dateInput.value = "";
+            const filtered = filteredData();  // 入力フィルターはそのまま活かす
+            renderTableRows(filtered, tbody);
+            updateChart(filtered);
+        });
+});
 
 function timeToSeconds(timeStr) {
     const parts = timeStr.split(':').map(Number);
@@ -73,6 +96,12 @@ function setupFilters(tbody) {
         inputs.forEach(id => document.getElementById(id).value = "");
         renderTableRows(originalData, tbody);
         updateChart(originalData);
+
+        // 日付選択もリセットしておく
+        const dateInput = document.getElementById('chartDate');
+        if (dateInput) {
+            dateInput.value = "";
+        }
     });
 }
 
@@ -101,18 +130,24 @@ function timeStrToDate(timeStr) {
     const now = new Date();
     const result = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, s);
 
-    console.log(`[DEBUG] timeStrToDate("${timeStr}") ->`, result);
+    // console.log(`[DEBUG] timeStrToDate("${timeStr}") ->`, result);
 
     return result;
 }
 
-
-
 function onFilterChange(tbody) {
-    const filtered = filteredData();
+    let filtered = filteredData();
+
+    // 日付選択中なら日付でも絞り込む
+    const selectedDate = document.getElementById('chartDate').value;
+    if (selectedDate) {
+        filtered = filtered.filter(row => row.date === selectedDate);
+    }
+
     renderTableRows(filtered, tbody);
     updateChart(filtered);
 }
+
 
 function filteredData() {
     const tempMin = parseFloat(document.getElementById("tempMin").value);
@@ -189,73 +224,6 @@ function sortTableByColumn(data, columnIndex, tbody) {
     renderTableRows(data, tbody);
 }
 
-function createChart(data) {
-    const ctx = document.getElementById('sensorChart').getContext('2d');
-
-    // 時刻をラベルにする（例：HH:MM:SSのまま）
-    const labels = data.map(row => timeStrToDate(row.time)) || new Date();
-    console.log("Parsed time labels:", labels);
-    // 温度・湿度のデータ配列
-    const tempData = data.map(row => parseFloat(row.temp));
-    const humidData = data.map(row => parseFloat(row.humid));
-
-    const chart = new Chart(ctx, {
-        type: 'line',  // 折れ線グラフ
-        data: {
-            labels: labels,
-            datasets: [
-                {
-                    label: '温度 (℃)',
-                    data: tempData,
-                    borderColor: 'rgba(255, 99, 132, 1)',
-                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                    fill: false,
-                    tension: 0.1
-                },
-                {
-                    label: '湿度 (%)',
-                    data: humidData,
-                    borderColor: 'rgba(54, 162, 235, 1)',
-                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                    fill: false,
-                    tension: 0.1
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                x: {
-                    type: 'time',
-                    time: {
-                        unit: 'second',  // 単位を秒にすることでHH:mm:ss表示に近づける
-                        displayFormats: {
-                            second: 'HH:mm:ss'
-                        },
-                        tooltipFormat: 'HH:mm:ss'
-                    },
-                    title: {
-                        display: true,
-                        text: '時刻'
-                    }
-                },
-                y: {
-                    beginAtZero: false,
-                    title: {
-                        display: true,
-                        text: '値'
-                    }
-                }
-            },
-            plugins: {
-                legend: {
-                    display: true
-                }
-            }
-        }
-    });
-}
-
 function updateChart(data) {
     const ctx = document.getElementById('sensorChart')?.getContext('2d');
     if (!ctx) {
@@ -272,19 +240,14 @@ function updateChart(data) {
         const temp = parseFloat(d.temp);
         const humid = parseFloat(d.humid);
 
-        // データがすべて有効な場合のみ push
         if (time instanceof Date && !isNaN(temp) && !isNaN(humid)) {
             labels.push(time);
             tempData.push(temp);
             humidData.push(humid);
         } else {
-            console.warn(`[WARN] スキップされたデータ:`, d);
+            console.warn(`[WARN] Skipping invalid data:`, d);
         }
     });
-
-    console.log("[DEBUG] labels:", labels);
-    console.log("[DEBUG] tempData:", tempData);
-    console.log("[DEBUG] humidData:", humidData);
 
     if (sensorChart) {
         sensorChart.destroy();
@@ -319,7 +282,7 @@ function updateChart(data) {
                 x: {
                     type: 'time',
                     time: {
-                        unit: 'second',  // 単位を秒にすることでHH:mm:ss表示に近づける
+                        unit: 'second',
                         displayFormats: {
                             second: 'HH:mm:ss'
                         },
@@ -346,4 +309,3 @@ function updateChart(data) {
         }
     });
 }
-
