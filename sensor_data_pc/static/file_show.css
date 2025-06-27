@@ -26,13 +26,6 @@ th {
     background-color: #6e6e6e;
 }
 
-#sensorChart {
-    max-width: 800px;
-    max-height: 400px;
-    width: 100%;
-    height: auto;
-}
-
 @media (max-width: 600px) {
     body {
         font-size: 14px;
@@ -53,6 +46,23 @@ th {
     background-color: #6e6e6e;
     color: white; /* 文字を見やすく */
 }
+
+#chartForm {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1rem;
+}
+
+.form-row {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem; /* 要素間の間隔 */
+}
+
 
 #sensorChart {
     max-width: 800px;
