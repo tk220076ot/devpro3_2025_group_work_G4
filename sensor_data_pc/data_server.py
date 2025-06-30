@@ -25,29 +25,31 @@ def server_test(server_v1=SERVER, waiting_port_v1=WAITING_PORT):
         else:
             print(data_r_json)
 
-            data_r_list = json.loads(data_r_json) 
+            data_r_list = json.loads(data_r_json)
             print(data_r_list)
-            
+
             data0 = data_r_list[0]
             date_dht = data0["Date"]
             time_dht = data0["Time"]
             tempe_dht = data0["Temperature"]
             humid_dht = data0["Humidity"]
-            
-            
+            flag_dht = data0.get("Flag", "")  # ← 追加（なければ空文字）
+
             with open(file_name, mode='a') as f:
-                row_str = f"{date_dht},{time_dht},{tempe_dht},{humid_dht}\n"
+                row_str = f"{date_dht},{time_dht},{tempe_dht},{humid_dht},{flag_dht}\n"
                 f.write(row_str)
                 f.write('\n')
-                    
+
             print("tempe:" + str(tempe_dht))
             print("humid:" + str(humid_dht))
-            print("time" + str(time_dht))
+            print("time:" + str(time_dht))
+            print("flag:" + str(flag_dht))  # ← 追加（確認用）
 
             time.sleep(LOOP_WAIT)
 
         print("closing the data socket.")
         socket.close()
+
 
     socket_w = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 

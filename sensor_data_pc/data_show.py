@@ -17,15 +17,20 @@ def get_json_data():
         with open(file_path, encoding='utf-8', newline="") as f:
             csv_data = csv.reader(f)
             for row in csv_data:
-                data_list.append({
+                if len(row) < 4:
+                    continue  # 不完全な行をスキップ
+                data = {
                     "date": row[0],
                     "time": row[1],
                     "temp": row[2],
-                    "humid":row[3]
-                })
+                    "humid": row[3],
+                    "flag": row[4] if len(row) >= 5 else ""
+                }
+                data_list.append(data)
     except FileNotFoundError:
         return jsonify({"error": f"File '{file_path}' not found."}), 404
     return jsonify(data_list)
+
 
 if __name__ == "__main__":
     app.run(host = '0.0.0.0', port=5000, debug=True)

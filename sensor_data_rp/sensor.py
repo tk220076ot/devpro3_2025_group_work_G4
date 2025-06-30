@@ -1,20 +1,3 @@
-#!/usr/bin/env /usr/bin/python3
-# -*- coding: utf-8 -*-
-# Sample Implemantation of IPUT Course IoT Device Programming 3 (2023 Summer)
-# Michiharu Takemoto (takemoto.development@gmail.com)
-#
-# 2025/04/27
-# Get temperature and humidity data from DHT11
-# Loop vesion with exception
-#
-# NOT MIT License
-#
-# You have to use dht11_takemoto libraries by
-# storing dht11_takemoto.py in the same directory.
-# And, you have to install RPi.GPIO by
-# $ pip install RPi.GPIO
-# .
-
 import sys
 import RPi.GPIO as GPIO
 import dht11_takemoto as dht11
@@ -27,8 +10,8 @@ import json
 GPIO.setwarnings(True)
 GPIO.setmode(GPIO.BCM)
 dht11_instance = dht11.DHT11(pin=26)
-WAIT_INTERVAL = 2
-WAIT_INTERVAL_RETRY = 5
+WAIT_INTERVAL = 10
+WAIT_INTERVAL_RETRY = 10
 
 #SERVER = 'localhost'
 SERVER = '10.192.138.201'
@@ -53,36 +36,52 @@ def get_dht_data():
         raise(dht11.DHT11MissingDataError)
     return float(tempe), float(hum)
 
+# ...（上部は変更なし）
+
 def client_data(hostname_v1 = SERVER, waiting_port_v1 = WAITING_PORT, message1 = MESSAGE_FROM_CLIENT):
     node_s = hostname_v1
     port_s = waiting_port_v1
     count = 0
     tempe = 40.0
     humid = 85.0
+    prev_temp = None
+    prev_hum = None
     while True:
         socket_r_s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         socket_r_s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         print("node_s:", node_s,  " port_s:", str(port_s))
         socket_r_s.connect((node_s, port_s))
-        print('Connecting to the server. '
-            + 'node: ' + node_s + '  '
-            + 'port: ' + str(port_s))
+        print('Connecting to the server. ' + 'node: ' + node_s + '  ' + 'port: ' + str(port_s))
         try:
             tempe, humid = get_dht_data()
             now = datetime.datetime.now()
             now_time_str = now.strftime("%H:%M:%S")
             now_date_str = now.strftime("%Y-%m-%d")
+
+            # フラグ判定
+            flag_list = []
+            if prev_temp is not None and abs(tempe - prev_temp) >= 5.0:
+                flag_list.append("TEMP")
+            if prev_hum is not None and abs(humid - prev_hum) >= 10.0:
+                flag_list.append("HUM")
+            flag_str = ",".join(flag_list)
+
             data_s_list = [{
                 "Date": now_date_str,
                 "Time": now_time_str,
                 "Temperature": tempe,
-                "Humidity": humid
+                "Humidity": humid,
+                "Flag": flag_str
             }]
-            print("Temperature: %f  Humidity: %f" % (tempe, humid), now_date_str, now_time_str)
+            print("Temperature: %f  Humidity: %f" % (tempe, humid), now_date_str, now_time_str, "Flag:", flag_str)
             data_s_json = json.dumps(data_s_list)
             data_s = data_s_json.encode('utf-8')
             socket_r_s.send(data_s)
             socket_r_s.close()
+
+            prev_temp = tempe
+            prev_hum = humid
+
         except dht11.DHT11CRCError:
             print("DHT11CRCError in get_dht_data(). Let us ignore it!")
             time.sleep(WAIT_INTERVAL_RETRY)
@@ -92,10 +91,10 @@ def client_data(hostname_v1 = SERVER, waiting_port_v1 = WAITING_PORT, message1 =
         except KeyboardInterrupt:
             print("Ctrl-C is hit!")
             break
-        time.sleep(WAIT_INTERVAL)
-        # count = count + 1
-        # if (count > 5):
-        #     break
+
+        next_time = time.time() + WAIT_INTERVAL
+        while time.time() < next_time:
+            time.sleep(0.1)
 
 if __name__ == '__main__':
     print("Start if __name__ == '__main__'")
