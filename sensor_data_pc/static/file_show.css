@@ -26,13 +26,6 @@ th {
     background-color: #6e6e6e;
 }
 
-#sensorChart {
-    max-width: 800px;
-    max-height: 400px;
-    width: 100%;
-    height: auto;
-}
-
 @media (max-width: 600px) {
     body {
         font-size: 14px;
