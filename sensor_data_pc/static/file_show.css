@@ -92,3 +92,12 @@ input {
     border: 1px solid #ccc;
     border-radius: 4px;
 }
+
+.highlight_Danger {
+    color: red;
+    font-weight: bold;
+}
+
+.hidden {
+    display: none;
+}

@@ -13,6 +13,16 @@
     <body>
         <h1>各センサデータの一覧</h1>
 
+        <label><input type="checkbox" id="toggle-extreme"> 異常値を非表示にする</label>
+
+        <label for="region-select">地域を選択：</label>
+        <select id="region-select">
+            <option value="all">すべて表示</option>
+            {% for region in regions %}
+            <option value="{{region}}">{{ region }}</option>
+            {% endfor %}
+        </select>
+
         <form id="chartForm">
             <div class="form-row">
                 <label for="chartDate">チャート表示日付: </label>
@@ -45,6 +55,13 @@
                 <button type="button" class="btn btn-secondary mt-2" id="resetButton">リセット</button>
             </div>
         </form>
+
+        <h2>統計情報</h2>
+        <table>
+            <tr><th></th><th>最大</th><th>中央値</th><th>最頻値</th></tr>
+            <tr><th>温度</th><td>{{ stats.temp_max }}</td><td>{{ stats.temp_median }}</td><td>{{ stats.temp_mode }}</td></tr>
+            <tr><th>湿度</th><td>{{ stats.humid_max }}</td><td>{{ stats.humid_median }}</td><td>{{ stats.humid_mode }}</td></tr>
+        </table>
 
         <table id="csv-table">
             <thead></thead>

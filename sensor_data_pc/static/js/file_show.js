@@ -19,6 +19,7 @@ fetch('/data.json')
     .then(data => {
         console.log("[DEBUG] Fetched data:", data);
         originalData = data;
+        populateTable(data);
 
         const table = document.getElementById('csv-table');
         const thead = table.querySelector('thead');
@@ -309,3 +310,51 @@ function updateChart(data) {
         }
     });
 }
+
+function populateTable(data) {
+    const tbody = document.querySelector("#csv-table tbody");
+    const thead = document.querySelector("#csv-table thead");
+    tbody.innerHTML = "";
+    thead.innerHTML = "";
+
+    const header = ["日付", "時刻", "温度", "湿度", "地域"];
+    const tr = document.createElement("tr");
+    header.forEach(h => {
+        const th = document.createElement("th");
+        th.textContent = h;
+        tr.appendChild(th);
+    });
+    thead.appendChild(tr);
+
+    data.forEach(row => {
+        const tr = document.createElement("tr");
+        tr.classList.add("data-row");
+        tr.dataset.region = row.region;
+        const temp = parseFloat(row.temp);
+        const humid = parseFloat(row.humid);
+        if (temp < 0 || temp > 35 || humid < 20 || humid > 80) {
+            tr.classList.add("highlight_Danger");
+        }
+        [row.date, row.time, row.temp, row.humid, row.region].forEach(cell => {
+            const td = document.createElement("td");
+            td.textContent = cell;
+            tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+    });
+}
+
+document.getElementById("toggle-extreme").addEventListener("change", function() {
+    document.querySelectorAll(".data-row").forEach(row => {
+        if (row.classList.contains("highlight_Danger")) {
+            row.classList.toggle("hidden", this.checked);
+        }
+    });
+});
+
+document.getElementById("region-select").addEventListener("change", function() {
+    const selected = this.value;
+    document.querySelectorAll(".data-row").forEach(row => {
+        row.style.display = (selected === "all" || row.dataset.region === selected) ? "" : "none";
+    });
+});
