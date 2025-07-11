@@ -1,3 +1,4 @@
+// 修正済み file_show.js
 let sortState = {
     column: null,
     ascending: true
@@ -22,133 +23,80 @@ fetch('/data.json')
         populateTable(data);
 
         const table = document.getElementById('csv-table');
-        const thead = table.querySelector('thead');
         const tbody = table.querySelector('tbody');
-
-        // ヘッダー作成
-        const headerRow = document.createElement('tr');
-        columnOrder.forEach((col, index) => {
-            const th = document.createElement('th');
-            th.textContent = columnLabelMap[col] || col;
-            th.style.cursor = 'pointer';
-            th.addEventListener('click', () => {
-                sortTableByColumn(filteredData(), index, tbody);
-            });
-            headerRow.appendChild(th);
-        });
-        thead.appendChild(headerRow);
 
         setupFilters(tbody);
         renderTableRows(data, tbody);
         updateChart(data);
 
-        // 日付選択イベント追加
         const dateInput = document.getElementById('chartDate');
         dateInput.addEventListener('change', () => {
-            const selectedDate = dateInput.value; // yyyy-mm-dd形式
-
+            const selectedDate = dateInput.value;
             let filtered = filteredData();
             if (selectedDate) {
                 filtered = filtered.filter(row => row.date === selectedDate);
             }
-
             renderTableRows(filtered, tbody);
             updateChart(filtered);
         });
 
-        // 日付リセットボタン
         const resetDateBtn = document.getElementById('resetDateButton');
         resetDateBtn.addEventListener('click', () => {
             dateInput.value = "";
-            const filtered = filteredData();  // 入力フィルターはそのまま活かす
+            const filtered = filteredData();
             renderTableRows(filtered, tbody);
             updateChart(filtered);
         });
-});
+
+        document.getElementById("toggle-extreme")?.addEventListener("change", function () {
+            document.querySelectorAll(".data-row").forEach(row => {
+                if (row.classList.contains("highlight_Danger")) {
+                    row.classList.toggle("hidden", this.checked);
+                }
+            });
+        });
+
+        document.getElementById("region-select")?.addEventListener("change", function () {
+            onFilterChange(document.querySelector("#csv-table tbody"));
+        });
+    });
 
 function timeToSeconds(timeStr) {
     const parts = timeStr.split(':').map(Number);
-    if (parts.length === 3) {
-        const [h, m, s] = parts;
-        return h * 3600 + m * 60 + s;
-    } else if (parts.length === 2) {
-        const [h, m] = parts;
-        return h * 3600 + m * 60;
-    }
+    if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    if (parts.length === 2) return parts[0] * 3600 + parts[1] * 60;
     return 0;
 }
 
 function setupFilters(tbody) {
-    const inputs = [
-        "tempMin", "tempMax",
-        "humidMin", "humidMax",
-        "timeMin", "timeMax"
-    ];
+    const inputs = ["tempMin", "tempMax", "humidMin", "humidMax", "timeMin", "timeMax"];
+    inputs.forEach(id => document.getElementById(id).addEventListener("input", () => onFilterChange(tbody)));
 
-    inputs.forEach(id => {
-        document.getElementById(id).addEventListener("input", () => {
-            onFilterChange(tbody);
-        });
-    });
-
-    const resetBtn = document.getElementById("resetButton");
-    resetBtn.addEventListener("click", () => {
-        console.log("[DEBUG] Reset button clicked");
+    document.getElementById("resetButton").addEventListener("click", () => {
         inputs.forEach(id => document.getElementById(id).value = "");
         renderTableRows(originalData, tbody);
         updateChart(originalData);
-
-        // 日付選択もリセットしておく
-        const dateInput = document.getElementById('chartDate');
-        if (dateInput) {
-            dateInput.value = "";
-        }
+        document.getElementById('chartDate').value = "";
     });
 }
 
 function timeStrToDate(timeStr) {
-    if (!timeStr || typeof timeStr !== 'string') {
-        console.warn(`[WARN] Invalid time string:`, timeStr);
-        return null;
-    }
-
     const parts = timeStr.trim().split(":").map(Number);
-
-    if (parts.length < 2 || parts.some(isNaN)) {
-        console.warn(`[WARN] Failed to parse time:`, timeStr);
-        return null;
-    }
-
-    const h = parts[0] ?? 0;
-    const m = parts[1] ?? 0;
-    const s = parts[2] ?? 0;
-
-    if (h > 23 || m > 59 || s > 59) {
-        console.warn(`[WARN] Time out of range:`, timeStr);
-        return null;
-    }
-
-    const now = new Date();
-    const result = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, s);
-
-    // console.log(`[DEBUG] timeStrToDate("${timeStr}") ->`, result);
-
-    return result;
+    if (parts.length < 2 || parts.some(isNaN)) return null;
+    const [h, m, s = 0] = parts;
+    if (h > 23 || m > 59 || s > 59) return null;
+    return new Date(new Date().setHours(h, m, s, 0));
 }
 
 function onFilterChange(tbody) {
     let filtered = filteredData();
-
-    // 日付選択中なら日付でも絞り込む
     const selectedDate = document.getElementById('chartDate').value;
-    if (selectedDate) {
-        filtered = filtered.filter(row => row.date === selectedDate);
-    }
-
+    if (selectedDate) filtered = filtered.filter(row => row.date === selectedDate);
+    const selectedRegion = document.getElementById("region-select").value;
+    if (selectedRegion !== "all") filtered = filtered.filter(row => row.region === selectedRegion);
     renderTableRows(filtered, tbody);
     updateChart(filtered);
 }
-
 
 function filteredData() {
     const tempMin = parseFloat(document.getElementById("tempMin").value);
@@ -157,7 +105,6 @@ function filteredData() {
     const humidMax = parseFloat(document.getElementById("humidMax").value);
     const timeMin = document.getElementById("timeMin").value;
     const timeMax = document.getElementById("timeMax").value;
-
     const minSec = timeMin ? timeToSeconds(timeMin) : null;
     const maxSec = timeMax ? timeToSeconds(timeMax) : null;
 
@@ -165,14 +112,12 @@ function filteredData() {
         const temp = parseFloat(row.temp);
         const humid = parseFloat(row.humid);
         const time = timeToSeconds(row.time);
-
         if (!isNaN(tempMin) && temp < tempMin) return false;
         if (!isNaN(tempMax) && temp > tempMax) return false;
         if (!isNaN(humidMin) && humid < humidMin) return false;
         if (!isNaN(humidMax) && humid > humidMax) return false;
         if (minSec !== null && time < minSec) return false;
         if (maxSec !== null && time > maxSec) return false;
-
         return true;
     });
 }
@@ -180,37 +125,93 @@ function filteredData() {
 function renderTableRows(data, tbody) {
     tbody.innerHTML = "";
     data.forEach(row => {
-        const tr = document.createElement('tr');
-        columnOrder.forEach(cell => {
-            const td = document.createElement('td');
-            td.textContent = row[cell];
+        const tr = document.createElement("tr");
+        tr.classList.add("data-row");
+        tr.dataset.region = row.region;
+        const temp = parseFloat(row.temp);
+        const humid = parseFloat(row.humid);
+        if (temp < 0 || temp > 35 || humid < 20 || humid > 80) tr.classList.add("highlight_Danger");
+        [row.date, row.time, row.temp, row.humid, row.region].forEach(cell => {
+            const td = document.createElement("td");
+            td.textContent = cell;
             tr.appendChild(td);
         });
         tbody.appendChild(tr);
     });
 }
 
+function updateChart(data) {
+    const ctx = document.getElementById('sensorChart')?.getContext('2d');
+    if (!ctx) return;
+
+    const labels = [], tempData = [], humidData = [];
+    data.forEach(d => {
+        const time = timeStrToDate(d.time);
+        const temp = parseFloat(d.temp);
+        const humid = parseFloat(d.humid);
+        if (time && !isNaN(temp) && !isNaN(humid)) {
+            labels.push(time);
+            tempData.push(temp);
+            humidData.push(humid);
+        }
+    });
+
+    if (sensorChart) sensorChart.destroy();
+    sensorChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [
+                { label: '温度 (℃)', data: tempData, borderColor: 'rgba(255, 99, 132, 1)', backgroundColor: 'rgba(255, 99, 132, 0.2)', fill: false, tension: 0.1 },
+                { label: '湿度 (%)', data: humidData, borderColor: 'rgba(54, 162, 235, 1)', backgroundColor: 'rgba(54, 162, 235, 0.2)', fill: false, tension: 0.1 }
+            ]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                x: {
+                    type: 'time',
+                    time: { unit: 'second', displayFormats: { second: 'HH:mm:ss' }, tooltipFormat: 'HH:mm:ss' },
+                    title: { display: true, text: '時刻' }
+                },
+                y: { beginAtZero: false, title: { display: true, text: '値' } }
+            },
+            plugins: { legend: { display: true } }
+        }
+    });
+}
+
+function populateTable(data) {
+    const tbody = document.querySelector("#csv-table tbody");
+    const thead = document.querySelector("#csv-table thead");
+    tbody.innerHTML = "";
+    thead.innerHTML = "";
+
+    const header = ["日付", "時刻", "温度", "湿度", "地域"];
+    const tr = document.createElement("tr");
+    header.forEach((h, index) => {
+        const th = document.createElement("th");
+        th.textContent = h;
+        th.style.cursor = "pointer";
+        th.addEventListener("click", () => sortTableByColumn(filteredData(), index, tbody));
+        tr.appendChild(th);
+    });
+    thead.appendChild(tr);
+}
+
 function sortTableByColumn(data, columnIndex, tbody) {
     const key = columnOrder[columnIndex];
-
-    if (sortState.column === columnIndex) {
-        sortState.ascending = !sortState.ascending;
-    } else {
-        sortState.column = columnIndex;
-        sortState.ascending = true;
-    }
+    if (sortState.column === columnIndex) sortState.ascending = !sortState.ascending;
+    else { sortState.column = columnIndex; sortState.ascending = true; }
 
     data.sort((a, b) => {
-        let valA = a[key];
-        let valB = b[key];
-
+        let valA = a[key], valB = b[key];
         const timePattern = /^\d{1,2}:\d{2}:\d{2}$/;
         if (timePattern.test(valA) && timePattern.test(valB)) {
             valA = timeToSeconds(valA);
             valB = timeToSeconds(valB);
         } else {
-            const numA = parseFloat(valA);
-            const numB = parseFloat(valB);
+            const numA = parseFloat(valA), numB = parseFloat(valB);
             if (!isNaN(numA) && !isNaN(numB)) {
                 valA = numA;
                 valB = numB;
@@ -224,137 +225,3 @@ function sortTableByColumn(data, columnIndex, tbody) {
 
     renderTableRows(data, tbody);
 }
-
-function updateChart(data) {
-    const ctx = document.getElementById('sensorChart')?.getContext('2d');
-    if (!ctx) {
-        console.error("[ERROR] Canvas element not found");
-        return;
-    }
-
-    const labels = [];
-    const tempData = [];
-    const humidData = [];
-
-    data.forEach(d => {
-        const time = timeStrToDate(d.time);
-        const temp = parseFloat(d.temp);
-        const humid = parseFloat(d.humid);
-
-        if (time instanceof Date && !isNaN(temp) && !isNaN(humid)) {
-            labels.push(time);
-            tempData.push(temp);
-            humidData.push(humid);
-        } else {
-            console.warn(`[WARN] Skipping invalid data:`, d);
-        }
-    });
-
-    if (sensorChart) {
-        sensorChart.destroy();
-    }
-
-    sensorChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [
-                {
-                    label: '温度 (℃)',
-                    data: tempData,
-                    borderColor: 'rgba(255, 99, 132, 1)',
-                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                    fill: false,
-                    tension: 0.1
-                },
-                {
-                    label: '湿度 (%)',
-                    data: humidData,
-                    borderColor: 'rgba(54, 162, 235, 1)',
-                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                    fill: false,
-                    tension: 0.1
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                x: {
-                    type: 'time',
-                    time: {
-                        unit: 'second',
-                        displayFormats: {
-                            second: 'HH:mm:ss'
-                        },
-                        tooltipFormat: 'HH:mm:ss'
-                    },
-                    title: {
-                        display: true,
-                        text: '時刻'
-                    }
-                },
-                y: {
-                    beginAtZero: false,
-                    title: {
-                        display: true,
-                        text: '値'
-                    }
-                }
-            },
-            plugins: {
-                legend: {
-                    display: true
-                }
-            }
-        }
-    });
-}
-
-function populateTable(data) {
-    const tbody = document.querySelector("#csv-table tbody");
-    const thead = document.querySelector("#csv-table thead");
-    tbody.innerHTML = "";
-    thead.innerHTML = "";
-
-    const header = ["日付", "時刻", "温度", "湿度", "地域"];
-    const tr = document.createElement("tr");
-    header.forEach(h => {
-        const th = document.createElement("th");
-        th.textContent = h;
-        tr.appendChild(th);
-    });
-    thead.appendChild(tr);
-
-    data.forEach(row => {
-        const tr = document.createElement("tr");
-        tr.classList.add("data-row");
-        tr.dataset.region = row.region;
-        const temp = parseFloat(row.temp);
-        const humid = parseFloat(row.humid);
-        if (temp < 0 || temp > 35 || humid < 20 || humid > 80) {
-            tr.classList.add("highlight_Danger");
-        }
-        [row.date, row.time, row.temp, row.humid, row.region].forEach(cell => {
-            const td = document.createElement("td");
-            td.textContent = cell;
-            tr.appendChild(td);
-        });
-        tbody.appendChild(tr);
-    });
-}
-
-document.getElementById("toggle-extreme").addEventListener("change", function() {
-    document.querySelectorAll(".data-row").forEach(row => {
-        if (row.classList.contains("highlight_Danger")) {
-            row.classList.toggle("hidden", this.checked);
-        }
-    });
-});
-
-document.getElementById("region-select").addEventListener("change", function() {
-    const selected = this.value;
-    document.querySelectorAll(".data-row").forEach(row => {
-        row.style.display = (selected === "all" || row.dataset.region === selected) ? "" : "none";
-    });
-});

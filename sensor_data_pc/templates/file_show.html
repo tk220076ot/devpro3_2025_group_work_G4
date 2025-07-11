@@ -13,23 +13,20 @@
     <body>
         <h1>各センサデータの一覧</h1>
 
-        <label><input type="checkbox" id="toggle-extreme"> 異常値を非表示にする</label>
-
-        <label for="region-select">地域を選択：</label>
-        <select id="region-select">
-            <option value="all">すべて表示</option>
-            {% for region in regions %}
-            <option value="{{region}}">{{ region }}</option>
-            {% endfor %}
-        </select>
-
         <form id="chartForm">
+            <canvas id="sensorChart"></canvas>
             <div class="form-row">
                 <label for="chartDate">チャート表示日付: </label>
                 <input type="date" id="chartDate" />
                 <button type="button" id="resetDateButton">日付リセット</button>
+                <label for="region-select">地域を選択：</label>
+                <select id="region-select">
+                    <option value="all">すべて表示</option>
+                    {% for region in regions %}
+                    <option value="{{region}}">{{ region }}</option>
+                    {% endfor %}
+                </select>
             </div>
-            <canvas id="sensorChart"></canvas>
         </form>
 
         <form class="row g-3 align-items-end mb-4" id="filterForm">
@@ -56,6 +53,8 @@
             </div>
         </form>
 
+        <label><input type="checkbox" id="toggle-extreme"> 異常値を非表示にする</label>
+
         <h2>統計情報</h2>
         <table>
             <tr><th></th><th>最大</th><th>中央値</th><th>最頻値</th></tr>
@@ -70,4 +69,3 @@
     </body>
 
 </html>
-

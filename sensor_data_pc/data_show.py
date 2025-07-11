@@ -11,10 +11,10 @@ def index():
     df.columns = ["date", "time", "temp", "humid", "region"]
     stats = {
         "temp_max": df["temp"].max(),
-        "temp_midian": df["temp"].midian(),
+        "temp_median": df["temp"].median(),
         "temp_mode": df["temp"].mode().iloc[0],
         "humid_max": df["humid"].max(),
-        "humid_midian": df["humid"].midian(),
+        "humid_median": df["humid"].median(),
         "humid_mode": df["humid"].mode().iloc[0],
     }
     regions = sorted(df["region"].dropna().unique())
@@ -24,7 +24,7 @@ def index():
 def data():
     df = pd.read_csv("sensor_data_pc/data.csv")
     df.columns = ["date", "time", "temp", "humid", "region"]
-    return jsonify(df.to_rict(orient="records"))
+    return jsonify(df.to_dict(orient="records"))
 
 @app.route("/", methods=["GET"])
 def index1():
@@ -39,20 +39,16 @@ def get_json_data():
         with open(file_path, encoding='utf-8', newline="") as f:
             csv_data = csv.reader(f)
             for row in csv_data:
-                if len(row) < 4:
-                    continue  # 不完全な行をスキップ
-                data = {
+                data_list.append({
                     "date": row[0],
                     "time": row[1],
                     "temp": row[2],
-                    "humid": row[3],
-                    "flag": row[4] if len(row) >= 5 else ""
-                }
-                data_list.append(data)
+                    "humid":row[3],
+                    "region":row[4]
+                })
     except FileNotFoundError:
         return jsonify({"error": f"File '{file_path}' not found."}), 404
     return jsonify(data_list)
-
 
 if __name__ == "__main__":
     app.run(host = '0.0.0.0', port=5000, debug=True)
