@@ -63,7 +63,6 @@ th {
     gap: 1rem; /* 要素間の間隔 */
 }
 
-
 #sensorChart {
     max-width: 800px;
     max-height: 400px;

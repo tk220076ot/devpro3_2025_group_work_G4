@@ -19,11 +19,11 @@
                 <label for="chartDate">チャート表示日付: </label>
                 <input type="date" id="chartDate" />
                 <button type="button" id="resetDateButton">日付リセット</button>
-                <label for="region-select">地域を選択：</label>
-                <select id="region-select">
+                <label for="location-select">地域を選択：</label>
+                <select id="location-select">
                     <option value="all">すべて表示</option>
-                    {% for region in regions %}
-                    <option value="{{region}}">{{ region }}</option>
+                    {% for location in locations %}
+                    <option value="{{location}}">{{ location }}</option>
                     {% endfor %}
                 </select>
             </div>

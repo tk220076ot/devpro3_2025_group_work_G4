@@ -8,7 +8,7 @@ app = Flask(__name__)
 @app.route("/")
 def index():
     df = pd.read_csv("sensor_data_pc/data.csv")
-    df.columns = ["date", "time", "temp", "humid", "region"]
+    df.columns = ["date", "time", "temp", "humid", "location"]
     stats = {
         "temp_max": df["temp"].max(),
         "temp_median": df["temp"].median(),
@@ -17,13 +17,13 @@ def index():
         "humid_median": df["humid"].median(),
         "humid_mode": df["humid"].mode().iloc[0],
     }
-    regions = sorted(df["region"].dropna().unique())
-    return render_template("file_show.html", stats=stats, regions=regions)
+    locations = sorted(df["location"].dropna().unique())
+    return render_template("file_show.html", stats=stats, locations=locations)
 
 @app.route("/data.json")
 def data():
     df = pd.read_csv("sensor_data_pc/data.csv")
-    df.columns = ["date", "time", "temp", "humid", "region"]
+    df.columns = ["date", "time", "temp", "humid", "location"]
     return jsonify(df.to_dict(orient="records"))
 
 @app.route("/", methods=["GET"])
@@ -44,7 +44,7 @@ def get_json_data():
                     "time": row[1],
                     "temp": row[2],
                     "humid":row[3],
-                    "region":row[4]
+                    "location":row[4]
                 })
     except FileNotFoundError:
         return jsonify({"error": f"File '{file_path}' not found."}), 404

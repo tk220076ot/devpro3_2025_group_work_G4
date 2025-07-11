@@ -1,18 +1,18 @@
-// 修正済み file_show.js
 let sortState = {
     column: null,
     ascending: true
 };
 
 let originalData = [];
-const columnOrder = ["date", "time", "temp", "humid"];
+const columnOrder = ["date", "time", "temp", "humid", "region"];
 let sensorChart = null;
 
 const columnLabelMap = {
     date: "日付",
     time: "時刻",
     temp: "温度(℃)",
-    humid: "湿度(%)"
+    humid: "湿度(%)",
+    region: "場所"
 };
 
 fetch('/data.json')
@@ -54,9 +54,12 @@ fetch('/data.json')
                     row.classList.toggle("hidden", this.checked);
                 }
             });
+            const filtered = filteredData();
+            renderTableRows(filtered, tbody);
+            updateChart(filtered);
         });
 
-        document.getElementById("region-select")?.addEventListener("change", function () {
+        document.getElementById("location-select")?.addEventListener("change", function () {
             onFilterChange(document.querySelector("#csv-table tbody"));
         });
     });
@@ -92,13 +95,14 @@ function onFilterChange(tbody) {
     let filtered = filteredData();
     const selectedDate = document.getElementById('chartDate').value;
     if (selectedDate) filtered = filtered.filter(row => row.date === selectedDate);
-    const selectedRegion = document.getElementById("region-select").value;
-    if (selectedRegion !== "all") filtered = filtered.filter(row => row.region === selectedRegion);
+    const selectedLocation = document.getElementById("location-select").value;
+    if (selectedLocation !== "all") filtered = filtered.filter(row => row.Location === selectedLocation);
     renderTableRows(filtered, tbody);
     updateChart(filtered);
 }
 
 function filteredData() {
+    const hideExtreme = document.getElementById("toggle-extreme")?.checked;
     const tempMin = parseFloat(document.getElementById("tempMin").value);
     const tempMax = parseFloat(document.getElementById("tempMax").value);
     const humidMin = parseFloat(document.getElementById("humidMin").value);
@@ -112,6 +116,9 @@ function filteredData() {
         const temp = parseFloat(row.temp);
         const humid = parseFloat(row.humid);
         const time = timeToSeconds(row.time);
+
+        if (hideExtreme && (temp < 0 || temp > 35 || humid < 20 || humid > 80)) return false;
+
         if (!isNaN(tempMin) && temp < tempMin) return false;
         if (!isNaN(tempMax) && temp > tempMax) return false;
         if (!isNaN(humidMin) && humid < humidMin) return false;
@@ -127,11 +134,11 @@ function renderTableRows(data, tbody) {
     data.forEach(row => {
         const tr = document.createElement("tr");
         tr.classList.add("data-row");
-        tr.dataset.region = row.region;
+        tr.dataset.location = row.location;
         const temp = parseFloat(row.temp);
         const humid = parseFloat(row.humid);
         if (temp < 0 || temp > 35 || humid < 20 || humid > 80) tr.classList.add("highlight_Danger");
-        [row.date, row.time, row.temp, row.humid, row.region].forEach(cell => {
+        [row.date, row.time, row.temp, row.humid, row.location].forEach(cell => {
             const td = document.createElement("td");
             td.textContent = cell;
             tr.appendChild(td);
@@ -144,12 +151,18 @@ function updateChart(data) {
     const ctx = document.getElementById('sensorChart')?.getContext('2d');
     if (!ctx) return;
 
+    const sortedData = [...data].sort((a, b) => {
+        const aTime = new Date(`${a.date}T${a.time}`);
+        const bTime = new Date(`${b.date}T${b.time}`);
+        return aTime - bTime;
+    });
+
     const labels = [], tempData = [], humidData = [];
-    data.forEach(d => {
-        const time = timeStrToDate(d.time);
+    sortedData.forEach(d => {
+        const time = new Date(`${d.date}T${d.time}`);
         const temp = parseFloat(d.temp);
         const humid = parseFloat(d.humid);
-        if (time && !isNaN(temp) && !isNaN(humid)) {
+        if (!isNaN(temp) && !isNaN(humid)) {
             labels.push(time);
             tempData.push(temp);
             humidData.push(humid);
@@ -171,7 +184,7 @@ function updateChart(data) {
             scales: {
                 x: {
                     type: 'time',
-                    time: { unit: 'second', displayFormats: { second: 'HH:mm:ss' }, tooltipFormat: 'HH:mm:ss' },
+                    time: { unit: 'minute', displayFormats: { minute: 'HH:mm' }, tooltipFormat: 'HH:mm:ss' },
                     title: { display: true, text: '時刻' }
                 },
                 y: { beginAtZero: false, title: { display: true, text: '値' } }
@@ -181,13 +194,14 @@ function updateChart(data) {
     });
 }
 
+
 function populateTable(data) {
     const tbody = document.querySelector("#csv-table tbody");
     const thead = document.querySelector("#csv-table thead");
     tbody.innerHTML = "";
     thead.innerHTML = "";
 
-    const header = ["日付", "時刻", "温度", "湿度", "地域"];
+    const header = ["日付", "時刻", "温度", "湿度", "場所"];
     const tr = document.createElement("tr");
     header.forEach((h, index) => {
         const th = document.createElement("th");

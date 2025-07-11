@@ -71,7 +71,7 @@ def client_data(hostname_v1 = SERVER, waiting_port_v1 = WAITING_PORT, message1 =
                 "Time": now_time_str,
                 "Temperature": tempe,
                 "Humidity": humid,
-                "Region": "lab-A"
+                "Location": "lab-A"
             }]
             print("Temperature: %f  Humidity: %f" % (tempe, humid), now_date_str, now_time_str, "Flag:", flag_str)
             data_s_json = json.dumps(data_s_list)
