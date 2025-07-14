@@ -1,8 +1,9 @@
 body {
     font-family: sans-serif;
     padding: 1em;
-    background: white;
     margin: 0;
+    background: white;
+    font-size: 16px;
 }
 
 h1 {
@@ -10,10 +11,12 @@ h1 {
     color: black;
 }
 
+/* テーブルの基本設定 */
 table {
     width: 65%;
+    margin: 1em auto;
     border-collapse: collapse;
-    margin-top: 1em auto;
+    font-size: 1em;
 }
 
 th, td {
@@ -24,29 +27,11 @@ th, td {
 
 th {
     background-color: #6e6e6e;
+    color: white;
+    cursor: pointer;
 }
 
-@media (max-width: 600px) {
-    body {
-        font-size: 14px;
-    }
-
-    table, th, td {
-        font-size: 12px;
-    }
-}
-
-table {
-    width: 65%;
-    border-collapse: collapse;
-    margin: 1em auto; /* 中央寄せ */
-}
-
-th {
-    background-color: #6e6e6e;
-    color: white; /* 文字を見やすく */
-}
-
+/* チャートとフォーム */
 #chartForm {
     display: flex;
     flex-direction: column;
@@ -57,22 +42,22 @@ th {
 
 .form-row {
     display: flex;
-    flex-direction: row;
+    flex-wrap: wrap;
     justify-content: center;
     align-items: center;
-    gap: 1rem; /* 要素間の間隔 */
+    gap: 1rem;
 }
 
 #sensorChart {
     max-width: 800px;
-    max-height: 400px;
     width: 100%;
     height: auto;
-    border: 1px solid #ccc; /* 枠線追加 */
+    border: 1px solid #ccc;
     background-color: #f9f9f9;
     padding: 1em;
 }
 
+/* フィルターのレイアウト */
 form {
     display: flex;
     flex-wrap: wrap;
@@ -86,12 +71,18 @@ form div {
     flex-direction: column;
 }
 
-input {
+input, select, button {
     padding: 0.4em;
     border: 1px solid #ccc;
     border-radius: 4px;
+    font-size: 1em;
 }
 
+button {
+    cursor: pointer;
+}
+
+/* 異常値のハイライト */
 .highlight_Danger {
     color: red;
     font-weight: bold;
@@ -99,4 +90,19 @@ input {
 
 .hidden {
     display: none;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 600px) {
+    body {
+        font-size: 14px;
+    }
+
+    table, th, td {
+        font-size: 12px;
+    }
+
+    #sensorChart {
+        max-width: 100%;
+    }
 }

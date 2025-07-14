@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html lang="ja">
     <head>
-        <meta charset="UTF-8"/>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>各センサデータの表示</title>
-        <link rel="stylesheet" href="{{ url_for('static', filename='file_show.css') }}"/>
+
+        <!-- CSS & Chart.js 読み込み -->
+        <link rel="stylesheet" href="{{ url_for('static', filename='file_show.css') }}" />
         <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@2.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
         <script src="{{ url_for('static', filename='js/file_show.js') }}"></script>
@@ -13,54 +15,67 @@
     <body>
         <h1>各センサデータの一覧</h1>
 
+        <!-- チャートと場所・日付選択フォーム -->
         <form id="chartForm">
-            <canvas id="sensorChart"></canvas>
-            <div class="form-row">
-                <label for="chartDate">チャート表示日付: </label>
-                <input type="date" id="chartDate" />
-                <button type="button" id="resetDateButton">日付リセット</button>
-                <label for="location-select">場所を選択：</label>
-                <select id="location-select">
-                    <option value="all">すべて表示</option>
-                    {% for location in locations %}
-                    <option value="{{location}}">{{ location }}</option>
-                    {% endfor %}
-                </select>
-            </div>
+        <canvas id="sensorChart"></canvas>
+        <div class="form-row">
+            <label for="chartDate">チャート表示日付:</label>
+            <input type="date" id="chartDate" />
+            <button type="button" id="resetDateButton">日付リセット</button>
+
+            <label for="location-select">場所を選択：</label>
+            <select id="location-select">
+            <option value="all">すべて表示</option>
+            {% for location in locations %}
+            <option value="{{ location }}">{{ location }}</option>
+            {% endfor %}
+            </select>
+        </div>
         </form>
 
-        <form class="row g-3 align-items-end mb-4" id="filterForm">
-            <div class="col-auto col-sm-3 col-md-2">
-                <label class="form-label">温度</label>
-                <input type="number" id="tempMin" class="form-control" placeholder="最小">
-                <input type="number" id="tempMax" class="form-control mt-1" placeholder="最大">
-            </div>
+        <!-- 温度・湿度・時刻・日付でのフィルターフォーム -->
+        <form id="filterForm">
+        <div>
+            <label>温度</label>
+            <input type="number" id="tempMin" placeholder="最小" />
+            <input type="number" id="tempMax" placeholder="最大" class="mt-1" />
+        </div>
 
-            <div class="col-auto col-sm-3 col-md-2">
-                <label class="form-label">湿度</label>
-                <input type="number" id="humidMin" class="form-control" placeholder="最小">
-                <input type="number" id="humidMax" class="form-control mt-1" placeholder="最大">
-            </div>
-            <div class="col-auto col-sm-3 col-md-2">
-                <label for="filterDate">表データ日付: </label>
-                <input type="date" id="filterDate" />
-            </div>
-            <div class="col-auto col-sm-3 col-md-2">
-                <label class="form-label">時刻</label>
-                <input type="time" id="timeMin" class="form-control">
-                <input type="time" id="timeMax" class="form-control mt-1">
-            </div>
+        <div>
+            <label>湿度</label>
+            <input type="number" id="humidMin" placeholder="最小" />
+            <input type="number" id="humidMax" placeholder="最大" class="mt-1" />
+        </div>
 
-            <div class="col-auto d-flex flex-column">
-                <button type="button" class="btn btn-secondary mt-2" id="resetButton">リセット</button>
-            </div>
+        <div>
+            <label for="filterDate">表データ日付:</label>
+            <input type="date" id="filterDate" />
+        </div>
+
+        <div>
+            <label>時刻</label>
+            <input type="time" id="timeMin" />
+            <input type="time" id="timeMax" class="mt-1" />
+        </div>
+
+        <div>
+            <button type="button" id="resetButton">リセット</button>
+        </div>
         </form>
 
-        <label><input type="checkbox" id="toggle-extreme"> 異常値を非表示にする</label>
+        <!-- 異常値の非表示切り替え -->
+        <label><input type="checkbox" id="toggle-extreme" /> 異常値を非表示にする</label>
 
+        <!-- 統計表示 -->
         <h2>統計情報</h2>
         <table>
-        <tr><th></th><th>最大</th><th>中央値</th><th>平均</th><th>最頻値</th></tr>
+        <tr>
+            <th></th>
+            <th>最大</th>
+            <th>中央値</th>
+            <th>平均</th>
+            <th>最頻値</th>
+        </tr>
         <tr>
             <th>温度</th>
             <td id="stat-temp-max"></td>
@@ -77,10 +92,10 @@
         </tr>
         </table>
 
+        <!-- CSVデータ表示テーブル -->
         <table id="csv-table">
-            <thead></thead>
-            <tbody></tbody>
+        <thead></thead>
+        <tbody></tbody>
         </table>
     </body>
-
 </html>
