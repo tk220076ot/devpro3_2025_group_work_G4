@@ -15,6 +15,31 @@ const columnLabelMap = {
     region: "場所"
 };
 
+window.addEventListener("DOMContentLoaded", () => {
+    fetch('/data.json')
+        .then(response => response.json())
+        .then(data => {
+            originalData = data;
+
+            const uniqueDates = [...new Set(data.map(d => d.date))].sort();
+            const today = new Date().toISOString().split("T")[0];
+            const hasToday = uniqueDates.includes(today);
+
+            const defaultDate = hasToday ? today : uniqueDates[0];
+
+            document.getElementById("chartDate").value = defaultDate;
+
+            populateTable(data);
+            const tbody = document.getElementById('csv-table').querySelector('tbody');
+            setupFilters(tbody);
+            renderTableRows(filteredData(), tbody);
+            updateChart(data);
+            setupEventListeners(tbody);
+        });
+});
+
+
+
 fetch('/data.json')
     .then(response => response.json())
     .then(data => {
@@ -29,24 +54,31 @@ fetch('/data.json')
         renderTableRows(data, tbody);
         updateChart(data);
 
-        const dateInput = document.getElementById('chartDate');
-        dateInput.addEventListener('change', () => {
-            const selectedDate = dateInput.value;
-            let filtered = filteredData();
-            if (selectedDate) {
-                filtered = filtered.filter(row => row.date === selectedDate);
-            }
-            renderTableRows(filtered, tbody);
-            updateChart(filtered);
+        document.getElementById('chartDate')?.addEventListener('change', () => {
+            updateChart(originalData);  // originalData をフィルターして再描画
         });
 
-        const resetDateBtn = document.getElementById('resetDateButton');
-        resetDateBtn.addEventListener('click', () => {
-            dateInput.value = "";
+        document.getElementById("filterDate")?.addEventListener("input", () => {
+            const tbody = document.querySelector("#csv-table tbody");
             const filtered = filteredData();
             renderTableRows(filtered, tbody);
-            updateChart(filtered);
+            updateChart(originalData);  // チャートは chartDate に従って維持
         });
+
+
+        document.getElementById('resetDateButton')?.addEventListener('click', () => {
+            const uniqueDates = [...new Set(originalData.map(d => d.date))].sort();
+            const today = new Date().toISOString().split("T")[0];
+            const hasToday = uniqueDates.includes(today);
+            const defaultDate = hasToday ? today : uniqueDates[0];
+
+            document.getElementById('chartDate').value = defaultDate;
+
+            const tbody = document.getElementById("csv-table").querySelector("tbody");
+            renderTableRows(filteredData(), tbody);
+            updateChart(originalData);
+        });
+
 
         document.getElementById("toggle-extreme")?.addEventListener("change", function () {
             document.querySelectorAll(".data-row").forEach(row => {
@@ -64,6 +96,37 @@ fetch('/data.json')
         });
     });
 
+function setupEventListeners(tbody) {
+    const dateInput = document.getElementById('chartDate');
+    dateInput.addEventListener('change', () => {
+        const filtered = filteredData();
+        renderTableRows(filtered, tbody);
+        updateChart(originalData);
+    });
+
+    document.getElementById('resetDateButton')?.addEventListener('click', () => {
+        const uniqueDates = [...new Set(originalData.map(d => d.date))].sort();
+        const today = new Date().toISOString().split("T")[0];
+        const hasToday = uniqueDates.includes(today);
+        const defaultDate = hasToday ? today : uniqueDates[0];
+
+        document.getElementById('chartDate').value = defaultDate;
+
+        renderTableRows(filteredData(), tbody);
+        updateChart(originalData);
+    });
+
+    document.getElementById("toggle-extreme")?.addEventListener("change", () => {
+        renderTableRows(filteredData(), tbody);
+        updateChart(originalData);
+    });
+
+    document.getElementById("location-select")?.addEventListener("change", () => {
+        onFilterChange(tbody);
+    });
+}
+
+
 function timeToSeconds(timeStr) {
     const parts = timeStr.split(':').map(Number);
     if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
@@ -79,7 +142,6 @@ function setupFilters(tbody) {
         inputs.forEach(id => document.getElementById(id).value = "");
         renderTableRows(originalData, tbody);
         updateChart(originalData);
-        document.getElementById('chartDate').value = "";
     });
 }
 
@@ -96,7 +158,7 @@ function onFilterChange(tbody) {
     const selectedDate = document.getElementById('chartDate').value;
     if (selectedDate) filtered = filtered.filter(row => row.date === selectedDate);
     const selectedLocation = document.getElementById("location-select").value;
-    if (selectedLocation !== "all") filtered = filtered.filter(row => row.Location === selectedLocation);
+    if (selectedLocation !== "all") filtered = filtered.filter(row => row.location === selectedLocation);
     renderTableRows(filtered, tbody);
     updateChart(filtered);
 }
@@ -109,6 +171,7 @@ function filteredData() {
     const humidMax = parseFloat(document.getElementById("humidMax").value);
     const timeMin = document.getElementById("timeMin").value;
     const timeMax = document.getElementById("timeMax").value;
+    const dateFilter = document.getElementById("filterDate").value;
     const minSec = timeMin ? timeToSeconds(timeMin) : null;
     const maxSec = timeMax ? timeToSeconds(timeMax) : null;
 
@@ -123,6 +186,7 @@ function filteredData() {
         if (!isNaN(tempMax) && temp > tempMax) return false;
         if (!isNaN(humidMin) && humid < humidMin) return false;
         if (!isNaN(humidMax) && humid > humidMax) return false;
+        if (dateFilter && row.date !== dateFilter) return false;
         if (minSec !== null && time < minSec) return false;
         if (maxSec !== null && time > maxSec) return false;
         return true;
@@ -145,17 +209,18 @@ function renderTableRows(data, tbody) {
         });
         tbody.appendChild(tr);
     });
+
+    updateStatistics(data);
 }
 
 function updateChart(data) {
+    const chartDate = document.getElementById('chartDate').value;
+    const filtered = chartDate ? data.filter(row => row.date === chartDate) : data;
+
     const ctx = document.getElementById('sensorChart')?.getContext('2d');
     if (!ctx) return;
 
-    const sortedData = [...data].sort((a, b) => {
-        const aTime = new Date(`${a.date}T${a.time}`);
-        const bTime = new Date(`${b.date}T${b.time}`);
-        return aTime - bTime;
-    });
+    const sortedData = [...filtered].sort((a, b) => new Date(`${a.date}T${a.time}`) - new Date(`${b.date}T${b.time}`));
 
     const labels = [], tempData = [], humidData = [];
     sortedData.forEach(d => {
@@ -195,6 +260,38 @@ function updateChart(data) {
 }
 
 
+function updateStatistics(data) {
+    const temps = data.map(d => parseFloat(d.temp)).filter(t => !isNaN(t));
+    const humids = data.map(d => parseFloat(d.humid)).filter(h => !isNaN(h));
+
+    const stat = (arr) => {
+        if (arr.length === 0) return ["-", "-", "-", "-"];
+        const max = Math.max(...arr).toFixed(1);
+        const median = arr.sort((a, b) => a - b)[Math.floor(arr.length / 2)].toFixed(1);
+        const mean = (arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(1);
+        const modeMap = {};
+        arr.forEach(v => modeMap[v] = (modeMap[v] || 0) + 1);
+        const maxFreq = Math.max(...Object.values(modeMap));
+        const modes = Object.entries(modeMap).filter(([k, v]) => v === maxFreq).map(([k]) => k);
+        const mode = modes.join(", ");
+        return [max, median, mean, mode];
+    };
+
+    const [tMax, tMed, tMean, tMode] = stat(temps);
+    const [hMax, hMed, hMean, hMode] = stat(humids);
+
+    document.getElementById("stat-temp-max").textContent = tMax;
+    document.getElementById("stat-temp-median").textContent = tMed;
+    document.getElementById("stat-temp-mean").textContent = tMean;
+    document.getElementById("stat-temp-mode").textContent = tMode;
+
+    document.getElementById("stat-humid-max").textContent = hMax;
+    document.getElementById("stat-humid-median").textContent = hMed;
+    document.getElementById("stat-humid-mean").textContent = hMean;
+    document.getElementById("stat-humid-mode").textContent = hMode;
+}
+
+
 function populateTable(data) {
     const tbody = document.querySelector("#csv-table tbody");
     const thead = document.querySelector("#csv-table thead");
@@ -216,14 +313,22 @@ function populateTable(data) {
 function sortTableByColumn(data, columnIndex, tbody) {
     const key = columnOrder[columnIndex];
     if (sortState.column === columnIndex) sortState.ascending = !sortState.ascending;
-    else { sortState.column = columnIndex; sortState.ascending = true; }
+    else {
+        sortState.column = columnIndex;
+        sortState.ascending = true;
+    }
 
     data.sort((a, b) => {
         let valA = a[key], valB = b[key];
-        const timePattern = /^\d{1,2}:\d{2}:\d{2}$/;
-        if (timePattern.test(valA) && timePattern.test(valB)) {
-            valA = timeToSeconds(valA);
-            valB = timeToSeconds(valB);
+
+        if (key === "time") {
+            // 時刻ソートは date + time を Date 型に
+            valA = new Date(`${a.date}T${a.time}`);
+            valB = new Date(`${b.date}T${b.time}`);
+        } else if (key === "date") {
+            // 🔽 日付ソートも Date 型に変換
+            valA = new Date(a.date);
+            valB = new Date(b.date);
         } else {
             const numA = parseFloat(valA), numB = parseFloat(valB);
             if (!isNaN(numA) && !isNaN(numB)) {
@@ -239,3 +344,5 @@ function sortTableByColumn(data, columnIndex, tbody) {
 
     renderTableRows(data, tbody);
 }
+
+

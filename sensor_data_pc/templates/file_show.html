@@ -19,7 +19,7 @@
                 <label for="chartDate">チャート表示日付: </label>
                 <input type="date" id="chartDate" />
                 <button type="button" id="resetDateButton">日付リセット</button>
-                <label for="location-select">地域を選択：</label>
+                <label for="location-select">場所を選択：</label>
                 <select id="location-select">
                     <option value="all">すべて表示</option>
                     {% for location in locations %}
@@ -41,7 +41,10 @@
                 <input type="number" id="humidMin" class="form-control" placeholder="最小">
                 <input type="number" id="humidMax" class="form-control mt-1" placeholder="最大">
             </div>
-
+            <div class="col-auto col-sm-3 col-md-2">
+                <label for="filterDate">表データ日付: </label>
+                <input type="date" id="filterDate" />
+            </div>
             <div class="col-auto col-sm-3 col-md-2">
                 <label class="form-label">時刻</label>
                 <input type="time" id="timeMin" class="form-control">
@@ -57,9 +60,21 @@
 
         <h2>統計情報</h2>
         <table>
-            <tr><th></th><th>最大</th><th>中央値</th><th>最頻値</th></tr>
-            <tr><th>温度</th><td>{{ stats.temp_max }}</td><td>{{ stats.temp_median }}</td><td>{{ stats.temp_mode }}</td></tr>
-            <tr><th>湿度</th><td>{{ stats.humid_max }}</td><td>{{ stats.humid_median }}</td><td>{{ stats.humid_mode }}</td></tr>
+        <tr><th></th><th>最大</th><th>中央値</th><th>平均</th><th>最頻値</th></tr>
+        <tr>
+            <th>温度</th>
+            <td id="stat-temp-max"></td>
+            <td id="stat-temp-median"></td>
+            <td id="stat-temp-mean"></td>
+            <td id="stat-temp-mode"></td>
+        </tr>
+        <tr>
+            <th>湿度</th>
+            <td id="stat-humid-max"></td>
+            <td id="stat-humid-median"></td>
+            <td id="stat-humid-mean"></td>
+            <td id="stat-humid-mode"></td>
+        </tr>
         </table>
 
         <table id="csv-table">
