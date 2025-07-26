@@ -2,91 +2,83 @@ import sys
 import time
 import datetime
 import json
+import socket
+import threading
+import queue
 
 #SERVER = 'localhost'
 SERVER = '10.192.138.201'
 WAITING_PORT = 8765
-
-LOOP_WAIT = 5
-
-now = datetime.date.today()
+LOOP_WAIT = 10
 file_name = './data.csv'
 
-def server_test(server_v1=SERVER, waiting_port_v1=WAITING_PORT):
-    import socket
-    import threading
-    
-    def data_recv(socket, client_address):
+write_queue = queue.Queue()
+
+def file_writer():
+    print("[Writer] Writer thread started.")
+    while True:
+        row = write_queue.get()
+        if row is None:
+            print("[Writer] Stop signal received.")
+            break
+        try:
+            with open(file_name, 'a', encoding='utf-8') as f:
+                f.write(row + '\n')
+            print(f"[Writer] Wrote row: {row}")
+        except Exception as e:
+            print(f"[Writer] Write error: {e}")
+        write_queue.task_done()
+
+def data_recv(socket, client_address):
+    print(f"[Receiver] Connection from {client_address}")
+    try:
         data_r = socket.recv(1024)
         data_r_json = data_r.decode('utf-8')
         if not data_r_json.strip():
-            print("no data.")
-            print(data_r_json)
-        else:
-            print(data_r_json)
+            print("[Receiver] No data.")
+            return
+        data_r_list = json.loads(data_r_json)
+        data0 = data_r_list[0]
+        date_dht = data0["Date"]
+        time_dht = data0["Time"]
+        tempe_dht = data0["Temperature"]
+        humid_dht = data0["Humidity"]
+        location = data0.get("Location", "unknown")
 
-            data_r_list = json.loads(data_r_json) 
-            print(data_r_list)
-            
-            data0 = data_r_list[0]
-            date_dht = data0["Date"]
-            time_dht = data0["Time"]
-            tempe_dht = data0["Temperature"]
-            humid_dht = data0["Humidity"]
-            
-            
-            with open(file_name, mode='a') as f:
-                row_str = f"{date_dht},{time_dht},{tempe_dht},{humid_dht}\n"
-                f.write(row_str)
-                f.write('\n')
-                    
-            print("tempe:" + str(tempe_dht))
-            print("humid:" + str(humid_dht))
-            print("time" + str(time_dht))
+        row_str = f"{date_dht},{time_dht},{tempe_dht},{humid_dht},{location}"
+        write_queue.put(row_str)
 
-            time.sleep(LOOP_WAIT)
-
-        print("closing the data socket.")
+    except Exception as e:
+        print(f"[Receiver] Error: {e}")
+    finally:
+        print("[Receiver] Closing socket.")
         socket.close()
 
+def server_test(server_v1=SERVER, waiting_port_v1=WAITING_PORT):
     socket_w = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
     socket_w.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    socket_w.bind((server_v1, waiting_port_v1))
+    socket_w.listen(5)
 
-    node_s = server_v1
-    port_s = waiting_port_v1
-    socket_w.bind((node_s, port_s)) 
+    print(f"[Server] Listening on {server_v1}:{waiting_port_v1}")
 
-    BACKLOG = 5
-    socket_w.listen(BACKLOG)
+    writer_thread = threading.Thread(target=file_writer, daemon=True)
+    writer_thread.start()
 
-    print('Waiting for the connection from the client(s). '
-        + 'node: ' + node_s + '  '
-        + 'port: ' + str(port_s))
-
-    while True:
-        try:
-            socket_s_r = None
-            socket_s_r, client_address = socket_w.accept()
-            print('Connection from ' 
-                + str(client_address) 
-                + " has been established.")
-
-            
-            thread = threading.Thread(target=data_recv, args=(socket_s_r, client_address))
-            thread.start()
-
+    try:
+        while True:
+            try:
+                socket_s_r, client_address = socket_w.accept()
+                thread = threading.Thread(target=data_recv, args=(socket_s_r, client_address), daemon=True)
+                thread.start()
+            except json.decoder.JSONDecodeError:
+                print("[Server] JSONDecodeError")
             time.sleep(LOOP_WAIT)
-
-        except json.decoder.JSONDecodeError:
-            print("JSONDecodeError")
-        except KeyboardInterrupt:
-            print("Ctrl-C is hit!")
-            print("Now, closing the data socket.")
-            socket_s_r.close()
-            print("Now, closing the waiting socket.")
-            socket_w.close()
-            break
+    except KeyboardInterrupt:
+        print("[Server] KeyboardInterrupt: Shutting down.")
+        write_queue.put(None)
+        writer_thread.join()
+        socket_w.close()
 
 if __name__ == '__main__':
     print("Start if __name__ == '__main__'")
@@ -96,26 +88,15 @@ if __name__ == '__main__':
     hostname_v = SERVER
     waiting_port_v = WAITING_PORT
 
-    while True:
-            print(count, "/", sys_argc)
-            if(count >= sys_argc):
-                break
-
-            option_key = sys.argv[count]
-            if ("-h" == option_key):
-                count = count + 1
-                hostname_v = sys.argv[count]
-
-            if ("-p" == option_key):
-                count = count + 1
-                waiting_port_v = int(sys.argv[count])
-
-            if ("-k" == option_key):
-                count = count + 1
-                key_id_v = sys.argv[count]
-
-
-            count = count + 1
+    while count < sys_argc:
+        option_key = sys.argv[count]
+        if option_key == "-h":
+            count += 1
+            hostname_v = sys.argv[count]
+        elif option_key == "-p":
+            count += 1
+            waiting_port_v = int(sys.argv[count])
+        count += 1
 
     print(hostname_v)
     print(waiting_port_v)

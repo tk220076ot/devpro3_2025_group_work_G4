@@ -230,25 +230,28 @@ function updateStatistics(data) {
     const temps = data.map(d => parseFloat(d.temp)).filter(t => !isNaN(t));
     const humids = data.map(d => parseFloat(d.humid)).filter(h => !isNaN(h));
 
-    const calcStats = arr => {
+    const stat = (arr) => {
         if (arr.length === 0) return ["-", "-", "-", "-"];
         const max = Math.max(...arr).toFixed(1);
         const median = arr.sort((a, b) => a - b)[Math.floor(arr.length / 2)].toFixed(1);
         const mean = (arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(1);
-        const freq = {};
-        arr.forEach(v => freq[v] = (freq[v] || 0) + 1);
-        const maxFreq = Math.max(...Object.values(freq));
-        const mode = Object.keys(freq).filter(k => freq[k] === maxFreq).join(", ");
+        const modeMap = {};
+        arr.forEach(v => modeMap[v] = (modeMap[v] || 0) + 1);
+        const maxFreq = Math.max(...Object.values(modeMap));
+        const modes = Object.entries(modeMap).filter(([k, v]) => v === maxFreq).map(([k]) => k);
+        const mode = modes.length === 1 ? modes[0] : `${modes[0]} 他`;  // ← ここを変更
+
         return [max, median, mean, mode];
     };
 
-    const [tMax, tMed, tMean, tMode] = calcStats(temps);
-    const [hMax, hMed, hMean, hMode] = calcStats(humids);
+    const [tMax, tMed, tMean, tMode] = stat(temps);
+    const [hMax, hMed, hMean, hMode] = stat(humids);
 
     document.getElementById("stat-temp-max").textContent = tMax;
     document.getElementById("stat-temp-median").textContent = tMed;
     document.getElementById("stat-temp-mean").textContent = tMean;
     document.getElementById("stat-temp-mode").textContent = tMode;
+
     document.getElementById("stat-humid-max").textContent = hMax;
     document.getElementById("stat-humid-median").textContent = hMed;
     document.getElementById("stat-humid-mean").textContent = hMean;
