@@ -5,6 +5,7 @@ import time
 import datetime
 import socket
 import json
+import serial.tools.list_ports
 
 # ====== 設定 ======
 GPIO.setwarnings(True)
@@ -21,8 +22,8 @@ METHOD = "arduino"  # "gpio" or "arduino"
 SERIAL_PORT = "/dev/ttyUSB0"
 BAUD_RATE = 9600
 
+# ====== ポート確認 ======
 def list_serial_ports():
-    import serial.tools.list_ports
     ports = serial.tools.list_ports.comports()
     print("=== 接続候補ポート一覧 ===")
     for port in ports:
@@ -30,46 +31,36 @@ def list_serial_ports():
     if not ports:
         print("ポートが見つかりませんでした。USBが接続されているか確認してください。")
 
-# ====== DHTデータ取得関数 ======
+# ====== Arduino検出 ======
 def detect_arduino_port():
-    import serial.tools.list_ports
     ports = serial.tools.list_ports.comports()
     for port in ports:
-        # 対象キーワードに CP210x 系も追加
         keywords = ["Arduino", "CH340", "USB Serial", "CP210", "CP2102"]
         if any(k in port.description for k in keywords):
             print(f"[INFO] Arduino detected on: {port.device} ({port.description})")
             return port.device
     raise Exception("Arduinoが見つかりませんでした。USB接続を確認してください。")
 
-
+# ====== Arduinoからの読み取り ======
 def read_from_arduino():
     import serial
-    import time
-
-    try:
-        port = detect_arduino_port()
-        with serial.Serial(port, BAUD_RATE, timeout=15) as ser:  # タイムアウトは10秒以上に
-            print(f"[INFO] 接続ポート: {port}, Arduinoからの送信待機中...")
-
-            while True:
-                line = ser.readline().decode('utf-8').strip()
-                print(f"[DEBUG] 受信: '{line}'")
-
-                if "," in line:
-                    parts = line.split(",")
-                    if len(parts) == 2:
-                        temp_str, hum_str = parts
-                        return float(temp_str), float(hum_str)
-                    else:
-                        print("[WARN] 分割数が不正、再待機...")
+    port = detect_arduino_port()
+    with serial.Serial(port, BAUD_RATE, timeout=15) as ser:
+        print(f"[INFO] 接続ポート: {port}, Arduinoからの送信待機中...")
+        while True:
+            line = ser.readline().decode('utf-8').strip()
+            print(f"[DEBUG] 受信: '{line}'")
+            if "," in line:
+                parts = line.split(",")
+                if len(parts) == 2:
+                    temp_str, hum_str = parts
+                    return float(temp_str), float(hum_str)
                 else:
-                    print("[WARN] カンマなし、再待機...")
-    except Exception as e:
-        print("Arduino read error:", e)
-        raise
+                    print("[WARN] 分割数が不正、再待機...")
+            else:
+                print("[WARN] カンマなし、再待機...")
 
-
+# ====== GPIOからの読み取り ======
 def read_from_gpio():
     try:
         tempe, hum, check = dht11_instance.read()
@@ -84,6 +75,50 @@ def read_from_gpio():
         print("DHT11MissingDataError:", e)
         raise
 
+# ====== Arduinoテストモード ======
+def read_and_log(port, baudrate=9600, interval=10):
+    import serial
+    import datetime
+    import time
+
+    ser = serial.Serial(port, baudrate, timeout=2)
+    prev_time = None
+
+    try:
+        while True:
+            line = ser.readline().decode('utf-8').strip()
+            if not line:
+                continue
+
+            now_str = datetime.datetime.now().strftime("%H:%M:%S")
+            try:
+                temp_str, hum_str = line.split(",")
+                temp = float(temp_str)
+                hum = float(hum_str)
+            except Exception:
+                print(f"[{now_str}] パース失敗: {line}")
+                continue
+
+            if prev_time is None:
+                print(f"[{now_str}] temp={temp}, hum={hum} → 初回受信")
+            else:
+                interval_sec = time.time() - prev_time
+                print(f"[{now_str}] temp={temp}, hum={hum} → 間隔: {interval_sec:.2f}秒")
+
+            prev_time = time.time()
+            time.sleep(interval)
+    except KeyboardInterrupt:
+        print("終了")
+    finally:
+        ser.close()
+
+def test_arduino_read():
+    port = detect_arduino_port()
+    print(f"[TEST] Arduinoポート: {port}")
+    read_and_log(port)
+
+
+# ====== DHTデータ取得関数 ======
 def get_dht_data():
     if METHOD == "arduino":
         return read_from_arduino()
@@ -109,7 +144,6 @@ def client_data(hostname_v1=SERVER, waiting_port_v1=WAITING_PORT, location_v=DEF
             now_time_str = now.strftime("%H:%M:%S")
             now_date_str = now.strftime("%Y-%m-%d")
 
-            # 異常値検知
             flag_list = []
             if prev_temp is not None and abs(tempe - prev_temp) >= 5.0:
                 flag_list.append("TEMP")
@@ -122,8 +156,10 @@ def client_data(hostname_v1=SERVER, waiting_port_v1=WAITING_PORT, location_v=DEF
                 "Time": now_time_str,
                 "Temperature": tempe,
                 "Humidity": humid,
-                "Location": location_v
+                "Location": location_v,
+                "Method": METHOD
             }]
+            
             print("Temperature: %f  Humidity: %f" % (tempe, humid), now_date_str, now_time_str, "Flag:", flag_str)
             data_s_json = json.dumps(data_s_list)
             data_s = data_s_json.encode('utf-8')
@@ -152,6 +188,7 @@ if __name__ == '__main__':
     hostname_v = SERVER
     waiting_port_v = WAITING_PORT
     location_v = DEFAULT_LOCATION
+    run_test_arduino = False
 
     while count < sys_argc:
         option_key = sys.argv[count]
@@ -170,6 +207,8 @@ if __name__ == '__main__':
         elif option_key == "--list-ports":
             list_serial_ports()
             sys.exit(0)
+        elif option_key == "--test-arduino":
+            run_test_arduino = True
         count += 1
 
     print("host:", hostname_v)
@@ -177,4 +216,7 @@ if __name__ == '__main__':
     print("location:", location_v)
     print("method:", METHOD)
 
-    client_data(hostname_v, waiting_port_v, location_v)
+    if run_test_arduino:
+        test_arduino_read()
+    else:
+        client_data(hostname_v, waiting_port_v, location_v)
