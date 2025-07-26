@@ -1,3 +1,4 @@
+/* ========== 基本レイアウト ========== */
 body {
     font-family: sans-serif;
     padding: 1em;
@@ -11,7 +12,79 @@ h1 {
     color: black;
 }
 
-/* テーブルの基本設定 */
+/* ========== チャート部分 ========== */
+#chartForm {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1rem;
+}
+
+#sensorChart {
+    max-width: 800px;
+    width: 100%;
+    max-height: 500px;
+    border: 1px solid #ccc;
+    background-color: #f9f9f9;
+    padding: 1em;
+}
+
+.form-row {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+}
+
+/* ========== フィルタフォーム ========== */
+form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1em;
+    justify-content: center;
+    margin-bottom: 1em;
+}
+
+form div {
+    display: flex;
+    flex-direction: column;
+}
+
+#filterForm input {
+    height: auto;
+    max-width: 50px;
+    width: auto;
+}
+
+#filterForm select {
+    height: auto;
+    max-width: 100px;
+    width: auto;
+}
+
+/* 温度・湿度・時刻のフィルター横幅統一 */
+#tempMin, #tempMax,
+#humidMin, #humidMax,
+#timeMin, #timeMax {
+    width: 80px;
+    min-width: 80px;
+    max-width: 80px;
+}
+
+/* ========== 統計ヘッダー ========== */
+#stat-header {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 1em;
+    width: 65%;
+    margin: 2em auto 0.5em auto;
+}
+
+/* ========== テーブルスタイル ========== */
 table {
     width: 65%;
     margin: 1em auto;
@@ -31,74 +104,12 @@ th {
     cursor: pointer;
 }
 
-/* チャートとフォーム */
-#chartForm {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 1rem;
-}
-
-.form-row {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: center;
-    align-items: center;
-    gap: 1rem;
-}
-
-#sensorChart {
-    max-width: 800px;
-    width: 100%;
-    max-height: 500px;
-    border: 1px solid #ccc;
-    background-color: #f9f9f9;
-    padding: 1em;
-}
-
-#stat-header {
-    display: flex;
-    justify-content: flex-start;
-    align-items: center;
-    gap: 1em;
-    width: 65%;
-    margin: 2em auto 0.5em auto;
-}
-
-/* フィルターのレイアウト */
-form {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1em;
-    justify-content: center;
-    margin-bottom: 1em;
-}
-
-form div {
-    display: flex;
-    flex-direction: column;
-}
-
-
-#filterForm input {
-    height: auto;
-    max-width: 50;
-    width: auto;
-}
-
-#filterForm select {
-    height: auto;
-    max-width: 100px;
-    width: auto;
-}
-
+/* ========== ボタン ========== */
 button {
     cursor: pointer;
 }
 
-/* 異常値のハイライト */
+/* ========== 状態クラス ========== */
 .highlight_Danger {
     color: red;
     font-weight: bold;
@@ -108,7 +119,7 @@ button {
     display: none;
 }
 
-/* レスポンシブ対応 */
+/* ========== スマホ対応 ========== */
 @media (max-width: 600px) {
     body {
         font-size: 14px;
@@ -127,11 +138,23 @@ button {
         align-items: flex-start;
         gap: 0.5em;
     }
-    
-    #filterForm input[type="number"],
-    #filterForm input[type="date"],
-    #filterForm input[type="time"],
-    #filterForm select {
-        width: 100%;
+
+    #tempMin, #tempMax,
+    #humidMin, #humidMax {
+        width: 40px;
+        min-width: 40px;
+        max-width: 40px;
+    }
+
+    #timeMin, #timeMax {
+        width: 60px;
+        min-width: 60px;
+        max-width: 60px;
+    }
+
+    #chartDate {
+        width: 105px;
+        min-width: 105px;
+        max-width: 105px;
     }
 }

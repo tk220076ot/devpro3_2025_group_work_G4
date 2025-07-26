@@ -1,23 +1,19 @@
 import sys
-import time
-import datetime
 import json
 import socket
 import threading
 import queue
 import os
 
-
-#SERVER = 'localhost'
+# ====== 設定 ======
 SERVER = '10.192.138.204'
 WAITING_PORT = 8765
 LOOP_WAIT = 10
 base_dir = os.path.dirname(os.path.abspath(__file__))
 file_name = os.path.join(base_dir, 'data.csv')
-
 write_queue = queue.Queue()
 
-# 書き込み専用スレッド
+# ====== 書き込みスレッド ======
 def file_writer():
     print("[Writer] Writer thread started.")
     while True:
@@ -33,84 +29,67 @@ def file_writer():
             print(f"[Writer] Write error: {e}")
         write_queue.task_done()
 
-
-# データ受信スレッド
-def data_recv(socket, client_address):
+# ====== 受信スレッド ======
+def data_recv(client_socket, client_address):
     print(f"[Receiver] Connection from {client_address}")
     try:
-        data_r = socket.recv(1024)
-        data_r_json = data_r.decode('utf-8')
-        if not data_r_json.strip():
-            print("[Receiver] No data.")
+        data_raw = client_socket.recv(1024)
+        data_json = data_raw.decode('utf-8').strip()
+        if not data_json:
+            print("[Receiver] No data received.")
             return
-        data_r_list = json.loads(data_r_json)
-        data0 = data_r_list[0]
-        date_dht = data0["Date"]
-        time_dht = data0["Time"]
-        tempe_dht = data0["Temperature"]
-        humid_dht = data0["Humidity"]
-        location = data0.get("Location", "unknown")
-        method = data0.get("Method", "unknown")
 
-
-        row_str = f"{date_dht},{time_dht},{tempe_dht},{humid_dht},{location}"
-        write_queue.put(row_str)
-        print(f"[Receiver] Queued row: {row_str}, Method={method}, QueueSize={write_queue.qsize()}")
+        data_list = json.loads(data_json)
+        data = data_list[0]
+        row = f"{data['Date']},{data['Time']},{data['Temperature']},{data['Humidity']},{data.get('Location', 'unknown')}"
+        method = data.get("Method", "unknown")
+        write_queue.put(row)
+        print(f"[Receiver] Queued row: {row}, Method={method}, QueueSize={write_queue.qsize()}")
 
     except Exception as e:
         print(f"[Receiver] Error: {e}")
     finally:
         print("[Receiver] Closing socket.")
-        socket.close()
+        client_socket.close()
 
-
-def server_test(server_v1=SERVER, waiting_port_v1=WAITING_PORT):
-    socket_w = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    socket_w.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    socket_w.bind((server_v1, waiting_port_v1))
-    socket_w.listen(5)
-
-    print(f"[Server] Listening on {server_v1}:{waiting_port_v1}")
+# ====== サーバ起動 ======
+def server_test(server_ip=SERVER, port=WAITING_PORT):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    sock.bind((server_ip, port))
+    sock.listen(5)
+    print(f"[Server] Listening on {server_ip}:{port}")
 
     writer_thread = threading.Thread(target=file_writer, daemon=True)
     writer_thread.start()
 
     try:
         while True:
-            try:
-                socket_s_r, client_address = socket_w.accept()
-                thread = threading.Thread(target=data_recv, args=(socket_s_r, client_address), daemon=True)
-                thread.start()
-            except json.decoder.JSONDecodeError:
-                print("[Server] JSONDecodeError")
+            client_sock, client_addr = sock.accept()
+            threading.Thread(target=data_recv, args=(client_sock, client_addr), daemon=True).start()
     except KeyboardInterrupt:
         print("\n[Server] KeyboardInterrupt: Shutting down.")
-        write_queue.put(None)  # スレッド終了用
+        write_queue.put(None)
         writer_thread.join()
     finally:
-        socket_w.close()
+        sock.close()
         print("[Server] Socket closed.")
 
-
+# ====== 実行ブロック ======
 if __name__ == '__main__':
     print("Start if __name__ == '__main__'")
+    hostname = SERVER
+    port = WAITING_PORT
 
-    sys_argc = len(sys.argv)
-    count = 1
-    hostname_v = SERVER
-    waiting_port_v = WAITING_PORT
+    args = sys.argv[1:]
+    i = 0
+    while i < len(args):
+        if args[i] == "-h":
+            i += 1; hostname = args[i]
+        elif args[i] == "-p":
+            i += 1; port = int(args[i])
+        i += 1
 
-    while count < sys_argc:
-        option_key = sys.argv[count]
-        if option_key == "-h":
-            count += 1
-            hostname_v = sys.argv[count]
-        elif option_key == "-p":
-            count += 1
-            waiting_port_v = int(sys.argv[count])
-        count += 1
-
-    print(hostname_v)
-    print(waiting_port_v)
-    
-    server_test(hostname_v, waiting_port_v)
+    print(f"host: {hostname}")
+    print(f"port: {port}")
+    server_test(hostname, port)
