@@ -7,13 +7,14 @@ import threading
 import queue
 
 #SERVER = 'localhost'
-SERVER = '10.192.138.201'
+SERVER = '10.192.138.204'
 WAITING_PORT = 8765
 LOOP_WAIT = 10
 file_name = './data.csv'
 
 write_queue = queue.Queue()
 
+# 書き込み専用スレッド
 def file_writer():
     print("[Writer] Writer thread started.")
     while True:
@@ -24,11 +25,13 @@ def file_writer():
         try:
             with open(file_name, 'a', encoding='utf-8') as f:
                 f.write(row + '\n')
-            print(f"[Writer] Wrote row: {row}")
+            print(f"[Writer] Wrote row: {row}, QueueSize={write_queue.qsize()}")
         except Exception as e:
             print(f"[Writer] Write error: {e}")
         write_queue.task_done()
 
+
+# データ受信スレッド
 def data_recv(socket, client_address):
     print(f"[Receiver] Connection from {client_address}")
     try:
@@ -47,12 +50,14 @@ def data_recv(socket, client_address):
 
         row_str = f"{date_dht},{time_dht},{tempe_dht},{humid_dht},{location}"
         write_queue.put(row_str)
+        print(f"[Receiver] Queued row: {row_str}, QueueSize={write_queue.qsize()}")
 
     except Exception as e:
         print(f"[Receiver] Error: {e}")
     finally:
         print("[Receiver] Closing socket.")
         socket.close()
+
 
 def server_test(server_v1=SERVER, waiting_port_v1=WAITING_PORT):
     socket_w = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -73,12 +78,14 @@ def server_test(server_v1=SERVER, waiting_port_v1=WAITING_PORT):
                 thread.start()
             except json.decoder.JSONDecodeError:
                 print("[Server] JSONDecodeError")
-            time.sleep(LOOP_WAIT)
     except KeyboardInterrupt:
-        print("[Server] KeyboardInterrupt: Shutting down.")
-        write_queue.put(None)
+        print("\n[Server] KeyboardInterrupt: Shutting down.")
+        write_queue.put(None)  # スレッド終了用
         writer_thread.join()
+    finally:
         socket_w.close()
+        print("[Server] Socket closed.")
+
 
 if __name__ == '__main__':
     print("Start if __name__ == '__main__'")

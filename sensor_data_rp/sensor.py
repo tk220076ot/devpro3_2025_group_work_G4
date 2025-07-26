@@ -6,46 +6,60 @@ import datetime
 import socket
 import json
 
-# initialize GPIO
+# ====== 設定 ======
 GPIO.setwarnings(True)
 GPIO.setmode(GPIO.BCM)
 dht11_instance = dht11.DHT11(pin=26)
+
 WAIT_INTERVAL = 10
 WAIT_INTERVAL_RETRY = 10
 
-#SERVER = 'localhost'
 SERVER = '10.192.138.201'
 WAITING_PORT = 8765
 DEFAULT_LOCATION = "lab-A"
+METHOD = "gpio"  # "gpio" or "arduino"
+SERIAL_PORT = "/dev/ttyUSB0"
+BAUD_RATE = 9600
 
-def get_dht_data():
-    tempe = 200.0 # unnecessary value-setting
-    hum = 100.0 # unnecessary value-setting
+# ====== DHTデータ取得関数 ======
+def read_from_arduino():
+    import serial
+    try:
+        with serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=2) as ser:
+            line = ser.readline().decode('utf-8').strip()
+            temp_str, hum_str = line.split(",")
+            return float(temp_str), float(hum_str)
+    except Exception as e:
+        print("Arduino read error:", e)
+        raise
+
+def read_from_gpio():
     try:
         tempe, hum, check = dht11_instance.read()
         print('Last valid input: ' + str(datetime.datetime.now()))
         print('Temperature: %-3.1f C' % tempe)
         print('Humidity: %-3.1f %%' % hum)
-    except dht11.DHT11CRCError:
-        print('DHT11CRCError: ' + str(datetime.datetime.now()))
-        time.sleep(WAIT_INTERVAL_RETRY)
-        raise(dht11.DHT11CRCError)
-    except dht11.DHT11MissingDataError:
-        print('DHT11MissingDataError: ' + str(datetime.datetime.now()))
-        time.sleep(WAIT_INTERVAL_RETRY)
-        raise(dht11.DHT11MissingDataError)
-    return float(tempe), float(hum)
+        return float(tempe), float(hum)
+    except dht11.DHT11CRCError as e:
+        print("DHT11CRCError:", e)
+        raise
+    except dht11.DHT11MissingDataError as e:
+        print("DHT11MissingDataError:", e)
+        raise
 
-# ...（上部は変更なし）
+def get_dht_data():
+    if METHOD == "arduino":
+        return read_from_arduino()
+    else:
+        return read_from_gpio()
 
-def client_data(hostname_v1 = SERVER, waiting_port_v1 = WAITING_PORT, location_v = DEFAULT_LOCATION):
+# ====== ソケット送信メイン関数 ======
+def client_data(hostname_v1=SERVER, waiting_port_v1=WAITING_PORT, location_v=DEFAULT_LOCATION):
     node_s = hostname_v1
     port_s = waiting_port_v1
-    count = 0
-    tempe = 40.0
-    humid = 85.0
     prev_temp = None
     prev_hum = None
+
     while True:
         socket_r_s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         socket_r_s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -58,7 +72,7 @@ def client_data(hostname_v1 = SERVER, waiting_port_v1 = WAITING_PORT, location_v
             now_time_str = now.strftime("%H:%M:%S")
             now_date_str = now.strftime("%Y-%m-%d")
 
-            # フラグ判定
+            # 異常値検知
             flag_list = []
             if prev_temp is not None and abs(tempe - prev_temp) >= 5.0:
                 flag_list.append("TEMP")
@@ -82,11 +96,8 @@ def client_data(hostname_v1 = SERVER, waiting_port_v1 = WAITING_PORT, location_v
             prev_temp = tempe
             prev_hum = humid
 
-        except dht11.DHT11CRCError:
-            print("DHT11CRCError in get_dht_data(). Let us ignore it!")
-            time.sleep(WAIT_INTERVAL_RETRY)
-        except dht11.DHT11MissingDataError:
-            print("DHT11MissingDataError in get_dht_data(). Let us ignore it!")
+        except Exception as e:
+            print(f"Data acquisition error: {e}")
             time.sleep(WAIT_INTERVAL_RETRY)
         except KeyboardInterrupt:
             print("Ctrl-C is hit!")
@@ -96,6 +107,7 @@ def client_data(hostname_v1 = SERVER, waiting_port_v1 = WAITING_PORT, location_v
         while time.time() < next_time:
             time.sleep(0.1)
 
+# ====== 実行ブロック ======
 if __name__ == '__main__':
     print("Start if __name__ == '__main__'")
     sys_argc = len(sys.argv)
@@ -103,22 +115,26 @@ if __name__ == '__main__':
     hostname_v = SERVER
     waiting_port_v = WAITING_PORT
     location_v = DEFAULT_LOCATION
-    while True:
-        print(count, "/", sys_argc)
-        if(count >= sys_argc):
-            break
+
+    while count < sys_argc:
         option_key = sys.argv[count]
-        if ("-h" == option_key):
-            count = count + 1
+        if option_key == "-h":
+            count += 1
             hostname_v = sys.argv[count]
-        if ("-p" == option_key):
-            count = count + 1
+        elif option_key == "-p":
+            count += 1
             waiting_port_v = int(sys.argv[count])
-        if ("-l" == option_key or "--location" == option_key):
+        elif option_key in ("-l", "--location"):
             count += 1
             location_v = sys.argv[count]
-        count = count + 1
-    print(hostname_v)
-    print(waiting_port_v)
-    print(location_v)
+        elif option_key == "--method":
+            count += 1
+            METHOD = sys.argv[count]
+        count += 1
+
+    print("host:", hostname_v)
+    print("port:", waiting_port_v)
+    print("location:", location_v)
+    print("method:", METHOD)
+
     client_data(hostname_v, waiting_port_v, location_v)
