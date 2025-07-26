@@ -16,7 +16,7 @@ WAIT_INTERVAL_RETRY = 10
 #SERVER = 'localhost'
 SERVER = '10.192.138.201'
 WAITING_PORT = 8765
-MESSAGE_FROM_CLIENT = "Hello, I am a client."
+DEFAULT_LOCATION = "lab-A"
 
 def get_dht_data():
     tempe = 200.0 # unnecessary value-setting
@@ -38,7 +38,7 @@ def get_dht_data():
 
 # ...（上部は変更なし）
 
-def client_data(hostname_v1 = SERVER, waiting_port_v1 = WAITING_PORT, message1 = MESSAGE_FROM_CLIENT):
+def client_data(hostname_v1 = SERVER, waiting_port_v1 = WAITING_PORT, location_v = DEFAULT_LOCATION):
     node_s = hostname_v1
     port_s = waiting_port_v1
     count = 0
@@ -71,7 +71,7 @@ def client_data(hostname_v1 = SERVER, waiting_port_v1 = WAITING_PORT, message1 =
                 "Time": now_time_str,
                 "Temperature": tempe,
                 "Humidity": humid,
-                "Location": "lab-A"
+                "Location": location_v
             }]
             print("Temperature: %f  Humidity: %f" % (tempe, humid), now_date_str, now_time_str, "Flag:", flag_str)
             data_s_json = json.dumps(data_s_list)
@@ -102,7 +102,7 @@ if __name__ == '__main__':
     count = 1
     hostname_v = SERVER
     waiting_port_v = WAITING_PORT
-    message_v = MESSAGE_FROM_CLIENT
+    location_v = DEFAULT_LOCATION
     while True:
         print(count, "/", sys_argc)
         if(count >= sys_argc):
@@ -114,11 +114,11 @@ if __name__ == '__main__':
         if ("-p" == option_key):
             count = count + 1
             waiting_port_v = int(sys.argv[count])
-        if ("-m" == option_key):
-            count = count + 1
-            message_v = sys.argv[count]
+        if ("-l" == option_key or "--location" == option_key):
+            count += 1
+            location_v = sys.argv[count]
         count = count + 1
     print(hostname_v)
     print(waiting_port_v)
-    print(message_v)
-    client_data(hostname_v, waiting_port_v, message_v)
+    print(location_v)
+    client_data(hostname_v, waiting_port_v, location_v)
