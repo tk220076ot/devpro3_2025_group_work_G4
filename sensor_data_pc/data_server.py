@@ -5,12 +5,15 @@ import json
 import socket
 import threading
 import queue
+import os
+
 
 #SERVER = 'localhost'
 SERVER = '10.192.138.204'
 WAITING_PORT = 8765
 LOOP_WAIT = 10
-file_name = './data.csv'
+base_dir = os.path.dirname(os.path.abspath(__file__))
+file_name = os.path.join(base_dir, 'data.csv')
 
 write_queue = queue.Queue()
 
@@ -47,10 +50,12 @@ def data_recv(socket, client_address):
         tempe_dht = data0["Temperature"]
         humid_dht = data0["Humidity"]
         location = data0.get("Location", "unknown")
+        method = data0.get("Method", "unknown")
+
 
         row_str = f"{date_dht},{time_dht},{tempe_dht},{humid_dht},{location}"
         write_queue.put(row_str)
-        print(f"[Receiver] Queued row: {row_str}, QueueSize={write_queue.qsize()}")
+        print(f"[Receiver] Queued row: {row_str}, Method={method}, QueueSize={write_queue.qsize()}")
 
     except Exception as e:
         print(f"[Receiver] Error: {e}")
