@@ -14,24 +14,61 @@ dht11_instance = dht11.DHT11(pin=26)
 WAIT_INTERVAL = 10
 WAIT_INTERVAL_RETRY = 10
 
-SERVER = '10.192.138.201'
+SERVER = '10.192.138.247'
 WAITING_PORT = 8765
 DEFAULT_LOCATION = "lab-A"
-METHOD = "gpio"  # "gpio" or "arduino"
+METHOD = "arduino"  # "gpio" or "arduino"
 SERIAL_PORT = "/dev/ttyUSB0"
 BAUD_RATE = 9600
 
+def list_serial_ports():
+    import serial.tools.list_ports
+    ports = serial.tools.list_ports.comports()
+    print("=== 接続候補ポート一覧 ===")
+    for port in ports:
+        print(f"ポート: {port.device}, 説明: {port.description}")
+    if not ports:
+        print("ポートが見つかりませんでした。USBが接続されているか確認してください。")
+
 # ====== DHTデータ取得関数 ======
+def detect_arduino_port():
+    import serial.tools.list_ports
+    ports = serial.tools.list_ports.comports()
+    for port in ports:
+        # 対象キーワードに CP210x 系も追加
+        keywords = ["Arduino", "CH340", "USB Serial", "CP210", "CP2102"]
+        if any(k in port.description for k in keywords):
+            print(f"[INFO] Arduino detected on: {port.device} ({port.description})")
+            return port.device
+    raise Exception("Arduinoが見つかりませんでした。USB接続を確認してください。")
+
+
 def read_from_arduino():
     import serial
+    import time
+
     try:
-        with serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=2) as ser:
-            line = ser.readline().decode('utf-8').strip()
-            temp_str, hum_str = line.split(",")
-            return float(temp_str), float(hum_str)
+        port = detect_arduino_port()
+        with serial.Serial(port, BAUD_RATE, timeout=15) as ser:  # タイムアウトは10秒以上に
+            print(f"[INFO] 接続ポート: {port}, Arduinoからの送信待機中...")
+
+            while True:
+                line = ser.readline().decode('utf-8').strip()
+                print(f"[DEBUG] 受信: '{line}'")
+
+                if "," in line:
+                    parts = line.split(",")
+                    if len(parts) == 2:
+                        temp_str, hum_str = parts
+                        return float(temp_str), float(hum_str)
+                    else:
+                        print("[WARN] 分割数が不正、再待機...")
+                else:
+                    print("[WARN] カンマなし、再待機...")
     except Exception as e:
         print("Arduino read error:", e)
         raise
+
 
 def read_from_gpio():
     try:
@@ -130,6 +167,9 @@ if __name__ == '__main__':
         elif option_key == "--method":
             count += 1
             METHOD = sys.argv[count]
+        elif option_key == "--list-ports":
+            list_serial_ports()
+            sys.exit(0)
         count += 1
 
     print("host:", hostname_v)
