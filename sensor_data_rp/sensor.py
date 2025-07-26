@@ -15,9 +15,9 @@ dht11_instance = dht11.DHT11(pin=26)
 WAIT_INTERVAL = 10
 WAIT_INTERVAL_RETRY = 10
 
-SERVER = '10.192.138.247'
+SERVER = '10.192.138.204'
 WAITING_PORT = 8765
-DEFAULT_LOCATION = "lab-A"
+DEFAULT_LOCATION = "lab-B"
 METHOD = "arduino"  # "gpio" or "arduino"
 SERIAL_PORT = "/dev/ttyUSB0"
 BAUD_RATE = 9600
@@ -49,7 +49,6 @@ def read_from_arduino():
         print(f"[INFO] 接続ポート: {port}, Arduinoからの送信待機中...")
         while True:
             line = ser.readline().decode('utf-8').strip()
-            print(f"[DEBUG] 受信: '{line}'")
             if "," in line:
                 parts = line.split(",")
                 if len(parts) == 2:
@@ -100,10 +99,10 @@ def read_and_log(port, baudrate=9600, interval=10):
                 continue
 
             if prev_time is None:
-                print(f"[{now_str}] temp={temp}, hum={hum} → 初回受信")
+                print(f"[{now_str}] temp={temp:.2f}, hum={hum:.2f} → 初回受信")
             else:
                 interval_sec = time.time() - prev_time
-                print(f"[{now_str}] temp={temp}, hum={hum} → 間隔: {interval_sec:.2f}秒")
+                print(f"[{now_str}] temp={temp:.2f}, hum={hum:.2f} → 間隔: {interval_sec:.2f}秒")
 
             prev_time = time.time()
             time.sleep(interval)
