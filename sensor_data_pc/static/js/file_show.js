@@ -100,7 +100,6 @@ function updateFilteredData() {
     const humidMax = parseFloat(document.getElementById("humidMax").value);
     const timeMin = document.getElementById("timeMin").value;
     const timeMax = document.getElementById("timeMax").value;
-    const dateFilter = document.getElementById("filterDate").value;
     const chartDate = document.getElementById("chartDate").value;
     const selectedLocation = document.getElementById("location-select").value;
 
@@ -117,7 +116,6 @@ function updateFilteredData() {
         if (!isNaN(tempMax) && temp > tempMax) return false;
         if (!isNaN(humidMin) && humid < humidMin) return false;
         if (!isNaN(humidMax) && humid > humidMax) return false;
-        if (dateFilter && row.date !== dateFilter) return false;
         if (chartDate && row.date !== chartDate) return false;
         if (selectedLocation !== "all" && row.location !== selectedLocation) return false;
         if (minSec !== null && time < minSec) return false;

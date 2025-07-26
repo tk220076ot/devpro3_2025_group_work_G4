@@ -81,11 +81,17 @@ form div {
     flex-direction: column;
 }
 
-input, select, button {
-    padding: 0.4em;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-size: 1em;
+
+#filterForm input {
+    height: auto;
+    max-width: 50;
+    width: auto;
+}
+
+#filterForm select {
+    height: auto;
+    max-width: 100px;
+    width: auto;
 }
 
 button {
@@ -120,5 +126,12 @@ button {
         flex-direction: column;
         align-items: flex-start;
         gap: 0.5em;
+    }
+    
+    #filterForm input[type="number"],
+    #filterForm input[type="date"],
+    #filterForm input[type="time"],
+    #filterForm select {
+        width: 100%;
     }
 }

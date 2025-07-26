@@ -14,15 +14,17 @@
 
     <body>
         <h1>各センサデータの一覧</h1>
-
-        <!-- チャートと場所・日付選択フォーム -->
         <form id="chartForm">
         <canvas id="sensorChart"></canvas>
         <div class="form-row">
-            <label for="chartDate">チャート表示日付:</label>
+            <label for="chartDate">表示日付:</label>
             <input type="date" id="chartDate" />
             <button type="button" id="resetDateButton">日付リセット</button>
+        </div>
+        </form>
 
+        <form id="filterForm">
+        <div>
             <label for="location-select">場所を選択：</label>
             <select id="location-select">
             <option value="all">すべて表示</option>
@@ -31,10 +33,6 @@
             {% endfor %}
             </select>
         </div>
-        </form>
-
-        <!-- 温度・湿度・時刻・日付でのフィルターフォーム -->
-        <form id="filterForm">
         <div>
             <label>温度</label>
             <input type="number" id="tempMin" placeholder="最小" />
@@ -45,11 +43,6 @@
             <label>湿度</label>
             <input type="number" id="humidMin" placeholder="最小" />
             <input type="number" id="humidMax" placeholder="最大" class="mt-1" />
-        </div>
-
-        <div>
-            <label for="filterDate">表データ日付:</label>
-            <input type="date" id="filterDate" />
         </div>
 
         <div>
